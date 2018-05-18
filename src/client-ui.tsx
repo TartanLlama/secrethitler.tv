@@ -19,8 +19,10 @@ class NameForm extends React.Component {
   }
 
   async handleSubmit(event) {
+    event.preventDefault();
     ws = new Nes.Client('ws://localhost:3000');
-    const response = await ws.request('register');
+    await ws.connect();
+    const response = await ws.request({method: 'POST', path: '/register', payload: {name: "SAOESAOE"}});
     console.log(response);
   }
 

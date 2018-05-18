@@ -10,6 +10,7 @@ let registrations: registration[] = []
 export function register_player(reg: registration): boolean {
     if (registrations.length < 10) {
         registrations.push(reg);
+        console.log(get_player_names());
         return true;
     }
     return false;
@@ -33,4 +34,8 @@ export function start_game(): boolean {
         return true;
     }
     return false;
+}
+
+export function get_player_names(): string[] {
+       return registrations.map((x)=>x.name);
 }
