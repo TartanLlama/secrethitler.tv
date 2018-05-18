@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "outDir": "./js/",
+        "lib": ["ES6","dom"],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "src/*",
+            ]
+        },
+        "module": "commonjs",
+        "jsx": "react"
+    },
+    "files": [
+        "src/server-ui.tsx"                 
+    ],
+}

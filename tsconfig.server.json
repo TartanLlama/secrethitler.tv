@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "outDir": "./js/",
+        "lib": ["ES6"],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "src/*",
+            ]
+        },
+    },
+    "files": [
+        "src/server.ts",
+        "src/users.ts",
+    ],
+}
