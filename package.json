@@ -1,11 +1,11 @@
 {
-  "name": "secrethitler.tv",
+  "name": "secrethitler-tv",
   "version": "1.0.0",
   "description": "Secret Hitler on your TV",
   "main": "js/server.js",
   "scripts": {
-      "build": "webpack && tsc -p tsconfig.server.json",
-      "start": "nw ."
+    "build": "webpack && tsc -p tsconfig.server.json",
+    "start": "nw ."
   },
   "author": "Simon Brand",
   "license": "ISC",
