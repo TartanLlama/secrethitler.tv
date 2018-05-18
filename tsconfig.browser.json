@@ -8,10 +8,11 @@
                 "src/*",
             ]
         },
-        "module": "commonjs",
+
         "jsx": "react"
     },
     "files": [
-        "src/server-ui.tsx"                 
+        "src/client-ui.tsx",        
+        "src/server-ui.tsx"
     ],
 }

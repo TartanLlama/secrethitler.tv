@@ -15,43 +15,51 @@ const server = new Hapi.Server({
     host: 'localhost'
 });
 
-server.route({
-    method: 'GET',
-    path: '/',
-    handler: (request, h) => {
 
-        return 'Hello, world!';
-    }
-});
-
-server.route({
-    method: 'GET',
-    path: '/register',
-    handler: (request, h) => {
-        let success = Users.register_player({ip: request.info.remoteAddress, name: request.query["name"]});
-        if (success) return null;
-        return Boom.conflict('too many players registered');
-    }
-});
-
-server.route({
-    method: 'GET',
-    path: '/unregister',
-    handler: (request, h) => {
-        Users.unregister_player(request.info.remoteAddress);
-        return null;
-    }
-});
-
-server.route({
-    method: 'GET',
-    path: '/start-game',
-    handler: (request, h) => {
-        
-    }
-});
 
 const init = async () => {
+    await server.register(require('inert'));
+    server.route({
+        method: 'GET',
+        path: '/',
+        handler: {
+            file: './html/client.html'
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/js/{param*}',
+        handler: {
+            directory: {
+                path: './js',
+            }
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/node_modules/react/{param*}',
+        handler: {
+            directory: {
+                path: './node_modules/react',
+            }
+        }
+    });    
+    
+
+    server.route({
+        method: 'GET',
+        path: '/node_modules/react-dom/{param*}',
+        handler: {
+            directory: {
+                path: './node_modules/react-dom',
+            }
+        }
+    });    
+    
+
+    
     await server.start();
     console.log(`Server running at: ${server.info.uri}`);
 };

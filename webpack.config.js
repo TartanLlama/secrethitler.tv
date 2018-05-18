@@ -1,7 +1,11 @@
 module.exports = {
-    entry: "./src/server-ui.tsx",
+    entry: {
+        server: "./src/server-ui.tsx",
+        client: "./src/client-ui.tsx"
+    },
+    
     output: {
-        filename: "server-ui.js",
+        filename: "[name]-ui.js",
         path: __dirname + "/js"
     },
 
@@ -16,7 +20,7 @@ module.exports = {
     module: {
         rules: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
-            { test: /\.tsx?$/, loader: "awesome-typescript-loader?configFileName=tsconfig.server-ui.json" },
+            { test: /\.tsx?$/, loader: "awesome-typescript-loader?configFileName=tsconfig.browser.json" },
 
             // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
             { enforce: "pre", test: /\.js$/, loader: "source-map-loader" }

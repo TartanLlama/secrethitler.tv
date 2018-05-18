@@ -2,6 +2,10 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 ReactDOM.render(
-  <h1>Hello, world!</h1>,
+  <div>
+    <img src="../assets/liberal-mat.png" width="512"/>
+    <img src="../assets/liberal-mat.png" width="512"/>
+  </div>
+  ,
   document.getElementById('root')
 );
