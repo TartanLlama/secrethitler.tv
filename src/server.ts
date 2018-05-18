@@ -1,6 +1,6 @@
 "use strict";
 
-module.paths.push('src')
+module.paths.push('js')
 
 export = 0;
 import * as Hapi from 'hapi'
