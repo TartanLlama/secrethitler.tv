@@ -2,10 +2,14 @@
 
 Play Secret Hitler on your TV!
 
-Written in Typescript with:
-- node.js
-- Hapi
-- React
-- Webpack
-- nw.js
+Build steps:
+
+- Install [Node.js](https://nodejs.org/en/)
+- Install [NW.js](https://nwjs.io/)
+
+```
+$ npm install
+$ npm run build
+$ npm start
+```
 
