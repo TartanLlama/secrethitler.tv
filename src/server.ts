@@ -16,9 +16,10 @@ const server = new Hapi.Server({
 });
 
 
-
 const init = async () => {
     await server.register(require('inert'));
+    await server.register(require('nes'));
+    
     server.route({
         method: 'GET',
         path: '/',
@@ -47,7 +48,6 @@ const init = async () => {
         }
     });    
     
-
     server.route({
         method: 'GET',
         path: '/node_modules/react-dom/{param*}',
@@ -58,7 +58,17 @@ const init = async () => {
         }
     });    
     
-
+    server.route({
+        method: 'GET',
+        path: '/ws',
+        config: {
+            id: 'register',
+            handler: (request, h) => {
+                console.log(request.payload);
+                Users.register_player({socket: request.socket, name: request.payload['name']});
+            }
+        }
+    });    
     
     await server.start();
     console.log(`Server running at: ${server.info.uri}`);

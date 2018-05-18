@@ -1,5 +1,7 @@
+import * as Nes from 'nes'
+
 export interface registration {
-    ip: string;
+    socket: Nes.Socket;
     name: string;
 }
 
@@ -13,15 +15,11 @@ export function register_player(reg: registration): boolean {
     return false;
 }
 
-export function unregister_player(ip: string) {
-    registrations = registrations.filter(function(reg) { return reg.ip !== ip; });
-}
-
 enum Role {Liberal, Fascist,  Hitler}
 enum State { Registration, Playing, GameOver}
 
 export interface player {
-    ip: string;
+    socket: Nes.Socket;
     name: string;
     role: Role;
 }
