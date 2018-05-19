@@ -11,6 +11,7 @@
     },
     "files": [
         "src/server.ts",
-        "src/users.ts",
+        "src/client-protocol.ts",
+        "src/game.ts"
     ],
 }

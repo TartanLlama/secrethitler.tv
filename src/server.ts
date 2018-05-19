@@ -5,7 +5,8 @@ module.paths.push('js')
 export = 0;
 import * as Hapi from 'hapi'
 import * as Boom from 'boom'
-import * as Users from 'users'
+import * as Game from 'game'
+import * as ClientProtocol from 'client-protocol'
 declare var nw: any;
 
 nw.Window.open("./html/server.html")
@@ -62,8 +63,53 @@ const init = async () => {
         method: 'POST',
         path: '/register',
         handler: (request, h) => {
-          console.log(request);
-          return Users.register_player({socket: request.socket, name: request.payload['name']});
+          return Game.register_player({socket: request.socket, name: request.payload['name']});
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/start_game',
+        handler: (request, h) => {
+          return Game.startGame();
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/ready_to_play',
+        handler: (request, h) => {
+          let shouldStart =  Game.playerReady(request.socket);
+          if (shouldStart) {
+             server.broadcast({event: ClientProtocol.ClientEvent.AllReady});
+          }
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'POST',
+        path: '/select_chancellor',
+        handler: (request, h) => {
+          Game.selectChancellor(request.payload['name']);
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'POST',
+        path: '/vote',
+        handler: (request, h) => {
+          Game.vote(request.socket, request.payload['vote']);
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/update_ui',
+        handler: (request, h) => {
+          return Game.get_player_names();
         }
     });
 

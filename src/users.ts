@@ -17,7 +17,6 @@ export function register_player(reg: registration): boolean {
 }
 
 enum Role {Liberal, Fascist,  Hitler}
-enum State { Registration, Playing, GameOver}
 
 export interface player {
     socket: Nes.Socket;
@@ -26,14 +25,14 @@ export interface player {
 }
 
 let players: player[] = [];
-let state: State = State.Registration;
 
-export function start_game(): boolean {
-    if (registrations.length > 5 && registrations.length <= 10) {
-        state = State.Playing;
-        return true;
-    }
-    return false;
+export function initialise_roles(roles: Role[]) {
+    players = registrations.map((reg,i) => {
+        return { socket: reg.socket,
+                 name: reg.name,
+                 role: roles[i] };
+    });
+    console.log(players);
 }
 
 export function get_player_names(): string[] {
