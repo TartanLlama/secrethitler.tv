@@ -1,9 +1,10 @@
 module.exports = {
+    mode: "development",
     entry: {
         server: "./src/server-ui.tsx",
         client: "./src/client-ui.tsx"
     },
-    
+
     output: {
         filename: "[name]-ui.js",
         path: __dirname + "/js"
@@ -14,7 +15,8 @@ module.exports = {
 
     resolve: {
         // Add '.ts' and '.tsx' as resolvable extensions.
-        extensions: [".ts", ".tsx", ".js", ".json"]
+        extensions: [".ts", ".tsx", ".js", ".json"],
+        modules: ["./src", "./js", "node_modules"]
     },
 
     module: {
@@ -33,6 +35,6 @@ module.exports = {
     // dependencies, which allows browsers to cache those libraries between builds.
     externals: {
         "react": "React",
-        "react-dom": "ReactDOM"
+        "react-dom": "ReactDOM",
     },
 };

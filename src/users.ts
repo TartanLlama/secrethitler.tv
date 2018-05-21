@@ -1,5 +1,7 @@
+import * as Nes from 'nes'
+
 export interface registration {
-    ip: string;
+    socket: Nes.Socket;
     name: string;
 }
 
@@ -8,31 +10,31 @@ let registrations: registration[] = []
 export function register_player(reg: registration): boolean {
     if (registrations.length < 10) {
         registrations.push(reg);
+        console.log(get_player_names());
         return true;
     }
     return false;
 }
 
-export function unregister_player(ip: string) {
-    registrations = registrations.filter(function(reg) { return reg.ip !== ip; });
-}
-
 enum Role {Liberal, Fascist,  Hitler}
-enum State { Registration, Playing, GameOver}
 
 export interface player {
-    ip: string;
+    socket: Nes.Socket;
     name: string;
     role: Role;
 }
 
 let players: player[] = [];
-let state: State = State.Registration;
 
-export function start_game(): boolean {
-    if (registrations.length > 5 && registrations.length <= 10) {
-        state = State.Playing;
-        return true;
-    }
-    return false;
+export function initialise_roles(roles: Role[]) {
+    players = registrations.map((reg,i) => {
+        return { socket: reg.socket,
+                 name: reg.name,
+                 role: roles[i] };
+    });
+    console.log(players);
+}
+
+export function get_player_names(): string[] {
+       return registrations.map((x)=>x.name);
 }

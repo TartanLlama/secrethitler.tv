@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "outDir": "./js/",
-        "lib": ["ES6"],
+        "lib": ["es6", "dom"],
         "baseUrl": ".",
         "paths": {
             "*": [
@@ -11,6 +11,7 @@
     },
     "files": [
         "src/server.ts",
-        "src/users.ts",
+        "src/client-protocol.ts",
+        "src/game.ts"
     ],
 }

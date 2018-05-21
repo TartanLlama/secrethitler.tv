@@ -10,16 +10,22 @@
   "author": "Simon Brand",
   "license": "ISC",
   "dependencies": {
-    "@types/hapi": "^17.0.12",
     "events": "^2.0.0",
     "hapi": "^17.4.0",
     "http": "0.0.0",
     "inert": "^5.1.0",
+    "nes": "^8.1.0",
+    "nwjs": "^1.4.4",
     "react": "^16.3.2",
     "react-dom": "^16.3.2",
     "url": "^0.11.0"
   },
   "devDependencies": {
+    "@types/node": "^10.1.1",
+    "@types/hapi": "^17.0.12",
+    "@types/nes": "^7.0.5",
+    "@types/react": "^16.3.14",
+    "@types/react-dom": "^16.0.5",
     "awesome-typescript-loader": "^5.0.0",
     "source-map-loader": "^0.2.3",
     "typescript": "^2.8.3",

@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "outDir": "./js/",
-        "lib": ["ES6","dom"],
+        "lib": ["es6","dom"],
         "baseUrl": ".",
         "paths": {
             "*": [
@@ -12,7 +12,9 @@
         "jsx": "react"
     },
     "files": [
-        "src/client-ui.tsx",        
+        "src/client-ui.tsx",
         "src/server-ui.tsx"
+        "src/server.ts"
+        "src/users.ts"
     ],
 }
