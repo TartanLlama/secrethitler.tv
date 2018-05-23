@@ -6,6 +6,30 @@ declare var global: any;
 
 enum State { Registration, Playing };
 
+class PresidentPlaque extends React.Component {
+  render() {
+    return <img src="../assets/president.png" style={{width:'19vw'}}/>;
+  }
+}
+
+class ChancellorPlaque extends React.Component {
+  render() {
+    return <img src="../assets/chancellor.png" style={{width:'19vw'}}/>;
+  }
+}
+
+class VoteCard extends React.Component<{vote:boolean, hidden:boolean}> {
+  render() {
+    if (this.props.hidden) {
+      return <img src="../assets/vote-card-back.png" style={{width:'8vw'}}/>;
+    }
+    if (this.props.vote) {
+      return <img src="../assets/ja.png" style={{width:'8vw'}}/>;
+    }
+    return <img src="../assets/nein.png" style={{width:'8vw'}}/>;
+  }
+}
+
 function renderPlayerList (names: string[]) {
 ReactDOM.render(
   <ul>
@@ -24,13 +48,20 @@ ReactDOM.render(
     <div id="top-players" style={{display: 'flex'}}>
       {
         gameState.players.splice(gameState.players.length/2, gameState.players.length)
-                         .map((p)=>{ return <div style={{flex: '1', textAlign: 'center'}}>{p}</div>; })
+                         .map((p)=>{
+                           return <div style={{flex: '1', textAlign: 'center'}}>
+                                    <p>{p.name}</p>
+                                    { p.vote == null ? "" : <VoteCard hidden={p.voteHidden} vote={p.vote}/> }
+                                    { gameState.president === p.name ? <PresidentPlaque/> : "" }
+                                    { gameState.chancellor === p.name ? <ChancellorPlaque/> : "" }
+                                  </div>;
+                         })
       }
     </div>
 
     <div style={{position: 'relative'}}>
       <img src="../assets/draw-pile.png"
-           style={{width:'10%', top:'50%', transform:'perspective(1px) translateY(-50%)'}}/>    
+           style={{width:'10%', top:'50%', transform:'perspective(1px) translateY(-50%)'}}/>
       <img src="../assets/liberal-mat.png" style={{width:'80%'}}/>
       {
         range(0,gameState.nLiberalsPlayed).map((n) => {
@@ -50,12 +81,19 @@ ReactDOM.render(
 
       <img src="../assets/discard-pile.png" style={{width:'10%', top:'50%', transform:'perspective(1px) translateY(-50%)'}}/>
     </div>
-    
+
     <img src="../assets/fascist-mat-5.png" style={{width:'80%', paddingLeft:'10%'}}/>
     <div style={{display: 'flex'}} id="bottom-players">
       {
-        gameState.players.splice(0, gameState.players.length/2+1)
-                         .map((p)=> { return <div style={{flex: '1', textAlign: 'center'}}>{p}</div>; })
+        gameState.players.splice(0, gameState.players.length/2+1) //get the second half
+                         .reverse() //reverse so we form a circle
+                         .map((p)=> {
+                           return <div style={{flex: '1', textAlign: 'center'}}>
+                                    <p>{p.name}</p>
+                                    { p.vote == null ? "" : <VoteCard hidden={p.voteHidden} vote={p.vote}/> }
+                                    { gameState.president === p.name ? <PresidentPlaque/> : "" }
+                                    { gameState.chancellor === p.name ? <ChancellorPlaque/> : "" }
+                                  </div>; })
       }
     </div>
    </div>,
@@ -81,4 +119,3 @@ async function init() {
 
 
 init();
-

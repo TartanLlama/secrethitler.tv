@@ -5,6 +5,8 @@ import * as ReactDOM from "react-dom";
 
 var ws: Nes.Client;
 
+var currentCards: ClientProtocol.Card[];
+
 enum Role {Liberal, Fascist, Hitler}
 
 function roleName(role: Role) {
@@ -35,6 +37,22 @@ async function vote(v) {
 
     await ws.request({method: 'POST', path: '/vote', payload: {vote: v}});
 }
+
+async function discard(n: number) {
+    ReactDOM.render(
+        <h1>Wait for the chancellor to play</h1>
+            ,
+        document.getElementById('root'));
+
+    const remainder = currentCards.filter((c,idx) => { return idx != n; });
+    await ws.request({method: 'POST', path: '/discard', payload: {discard: currentCards[n], remainder: remainder}});
+}
+
+async function play(n: number) {
+    const remainder = currentCards.filter((c,idx) => { return idx != n; });
+    await ws.request({method: 'POST', path: '/play', payload: {play: currentCards[n], discard: remainder[0]}});
+}
+
 
 function handleServerMessage(message) {
     if (message.event === ClientProtocol.ClientEvent.StartGame) {
@@ -79,6 +97,7 @@ function handleServerMessage(message) {
         ReactDOM.render(
             <div>
                 <h1>Vote on {message.president} as President and {message.chancellor} as Chancellor.</h1>
+                { message.brexit && <h2>This is Brexit!</h2> }
                 <button onClick={(e)=>vote(true)}>Ja</button>
                 <button onClick={(e)=>vote(false)}>Nein</button>
             </div>
@@ -87,11 +106,14 @@ function handleServerMessage(message) {
         );
     }
 
-    else if (message.event === ClientProtocol.ClientEvent.NotifyCards) {
+    else if (message.event === ClientProtocol.ClientEvent.NotifyPresidentCards) {
+        currentCards = message.cards;
         ReactDOM.render(
             <div>
                 <h1>Choose a card to discard</h1>
-                { message.cards.map((c) => { return <button>{ClientProtocol.cardToString(c)}</button>; }) }
+                { message.cards.map((c,idx) =>
+                  { return <button onClick={(e)=>discard(idx)}>{ClientProtocol.cardToString(c)}</button>; })
+                }
             </div>
                 ,
             document.getElementById('root')
@@ -111,6 +133,21 @@ function handleServerMessage(message) {
                 ,
             document.getElementById('root'));
     }
+
+    else if (message.event === ClientProtocol.ClientEvent.NotifyChancellorCards) {
+        currentCards = message.cards;
+        ReactDOM.render(
+            <div>
+                <h1>Choose a card to play</h1>
+                { message.cards.map((c,idx) =>
+                  { return <button onClick={(e)=>play(idx)}>{ClientProtocol.cardToString(c)}</button>; })
+                }
+            </div>
+                ,
+            document.getElementById('root')
+        );
+    }
+
 }
 
 class NameForm extends React.Component {

@@ -20,6 +20,11 @@ const server = new Hapi.Server({
     host: 'localhost'
 });
 
+function updateUI() {
+  console.log(Game.getState());
+  uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
+}
+
 
 const init = async () => {
     await server.register(require('inert'));
@@ -77,7 +82,7 @@ const init = async () => {
         path: '/register',
         handler: (request, h) => {
           const success = Game.register_player({socket: request.socket, name: request.payload['name']});
-          uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});         
+          uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
           return success;
         }
     });
@@ -87,7 +92,7 @@ const init = async () => {
         handler: (request, h) => {
           const success = Game.startGame();
           if (success) {
-            uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
+            updateUI();
           }
           return success;
         }
@@ -110,6 +115,7 @@ const init = async () => {
         path: '/select_chancellor',
         handler: (request, h) => {
           Game.selectChancellor(request.payload['name']);
+          updateUI();
           return null;
         }
     });
@@ -119,9 +125,35 @@ const init = async () => {
         path: '/vote',
         handler: (request, h) => {
           Game.vote(request.socket, request.payload['vote']);
+          updateUI();
           return null;
         }
     });
+
+    server.route({
+        method: 'POST',
+        path: '/discard',
+        handler: (request, h) => {
+          Game.discardCard(request.payload['discard']);
+          Game.getChancellorSocket().send({event: ClientProtocol.ClientEvent.NotifyChancellorCards,
+                                           cards: request.payload['remainder']});
+          updateUI();
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'POST',
+        path: '/play',
+        handler: (request, h) => {
+          Game.playCard(request.payload['play']);
+          Game.discardCard(request.payload['discard']);
+          Game.startRound();
+          updateUI();
+          return null;
+        }
+    });
+
 
     await server.start();
     console.log(`Server running at: ${server.info.uri}`);
