@@ -2,6 +2,7 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as Nes from "nes";
 import * as ServerProtocol from 'server-protocol'
+import styled from 'styled-components';
 declare var global: any;
 
 enum State { Registration, Playing };
@@ -117,5 +118,14 @@ async function init() {
       await ws.request('/register_ui');
 }
 
+const Root = styled.div`
+  background: #36322a;
+  font-family: courier-prime,Courier,sans-serif;
+  color: #f7e1c3;
+`
+
+ReactDOM.render(
+  <Root id="root"/>,  document.getElementById('container')
+);
 
 init();
