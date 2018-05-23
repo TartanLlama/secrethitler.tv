@@ -2,6 +2,7 @@ import * as Nes from 'nes';
 import * as ClientProtocol from 'client-protocol';
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+import styled from 'styled-components';
 
 var ws: Nes.Client;
 
@@ -191,6 +192,18 @@ async function startGame(event) {
     const response = await ws.request('/start_game');
 }
 
+const Root = styled.div`
+  background: #36322a;
+  border-color: #f7e1c3;
+  border-style: solid;
+  border-width: 20px;
+  font-family: courier-prime,Courier,sans-serif;
+  color: #f7e1c3;
+`;
+
+ReactDOM.render(
+  <Root id="root"/>,  document.getElementById('container')
+);
 
 ReactDOM.render(
     <div>
