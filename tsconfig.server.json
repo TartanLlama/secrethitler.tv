@@ -12,6 +12,7 @@
     "files": [
         "src/server.ts",
         "src/client-protocol.ts",
+        "src/server-protocol.ts",        
         "src/game.ts"
     ],
 }

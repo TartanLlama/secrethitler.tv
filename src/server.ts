@@ -4,10 +4,14 @@ module.paths.push('js')
 
 export = 0;
 import * as Hapi from 'hapi'
+import * as Nes from 'nes'
 import * as Boom from 'boom'
 import * as Game from 'game'
 import * as ClientProtocol from 'client-protocol'
+import * as ServerProtocol from 'server-protocol'
 declare var nw: any;
+
+var uiSocket: Nes.Socket;
 
 nw.Window.open("./html/server.html")
 
@@ -60,18 +64,32 @@ const init = async () => {
     });
 
     server.route({
-        method: 'POST',
-        path: '/register',
+        method: 'GET',
+        path: '/register_ui',
         handler: (request, h) => {
-          return Game.register_player({socket: request.socket, name: request.payload['name']});
+          uiSocket = request.socket;
+          return null;
         }
     });
 
     server.route({
+        method: 'POST',
+        path: '/register',
+        handler: (request, h) => {
+          const success = Game.register_player({socket: request.socket, name: request.payload['name']});
+          uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});         
+          return success;
+        }
+    });
+    server.route({
         method: 'GET',
         path: '/start_game',
         handler: (request, h) => {
-          return Game.startGame();
+          const success = Game.startGame();
+          if (success) {
+            uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
+          }
+          return success;
         }
     });
 
@@ -102,14 +120,6 @@ const init = async () => {
         handler: (request, h) => {
           Game.vote(request.socket, request.payload['vote']);
           return null;
-        }
-    });
-
-    server.route({
-        method: 'GET',
-        path: '/update_ui',
-        handler: (request, h) => {
-          return Game.get_player_names();
         }
     });
 

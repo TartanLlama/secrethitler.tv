@@ -30,7 +30,7 @@ let players: player[] = [];
 
 }
 
-export function get_player_names(): string[] {
+export function getPlayerNames(): string[] {
        return registrations.map((x)=>x.name);
 }
 
@@ -144,4 +144,16 @@ export function vote(socket: Nes.Socket, vote: boolean) {
         }
     }
 
+}
+
+export function getState() {
+  return {
+           brexitCounter: 0,
+           nLiberalsPlayed: 5,
+           nFascistsPlayed: 6,
+           nDiscarded: 0,
+           nInDeck: 0,
+           players: getPlayerNames(),
+           president: null,
+           chancellor: null };
 }
