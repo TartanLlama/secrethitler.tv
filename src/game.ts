@@ -24,12 +24,19 @@ export interface player {
     role: Role;
     vote: boolean;
     voteHidden: boolean;
+    dead: boolean;
+    beenInvestigated: boolean;
 }
 
 let players: player[] = [];
 
  function initialise_roles(roles: Role[]) {
 
+}
+
+export function investigate(name: string): Role {
+  const role = players.find((p) => { return name === p.name; }).role;
+  return role == Role.Hitler ? Role.Fascist : role;
 }
 
 export function getPlayerNames(): string[] {
@@ -83,7 +90,9 @@ function shuffle(array) {
 }
 
 var president_index = null;
+var last_president_index = null;
 var chancellor_index = null;
+var last_chancellor_index = null;
 
 export function startGame(): boolean {
     if (registrations.length > 4 && registrations.length <= 10) {
@@ -94,10 +103,23 @@ export function startGame(): boolean {
                      name: reg.name,
                      role: roles[i],
                      vote: null,
-                     voteHidden: null};
+                     voteHidden: null,
+                     dead: false,
+                     beenInvestigated: false };
         });
         players.map((player) => {
-            player.socket.send({event: ClientProtocol.ClientEvent.StartGame, role: player.role});
+            const otherRoles = (()=> {
+              if (player.role === Role.Fascist
+                  || ((players.length === 5 || players.length == 6) && player.role === Role.Hitler)) {
+                return players.filter((p) => { return (p.role == Role.Fascist || p.role == Role.Hitler) && p !== player; })
+                              .map((p) => { return { name: p.name, role: p.role }; });
+              }                              
+              return [];
+            })();
+            console.log({event: ClientProtocol.ClientEvent.StartGame,
+                                role: player.role, otherRoles: otherRoles});
+            player.socket.send({event: ClientProtocol.ClientEvent.StartGame,
+                                role: player.role, otherRoles: otherRoles});
         });
         shuffle(players);
         president_index = 0;
@@ -110,13 +132,20 @@ var ready_to_play: player[] = [];
 var brexit_counter = 0;
 
 export function startRound() {
-    president_index = (president_index + 1) % players.length;
+    last_chancellor_index = chancellor_index;
     chancellor_index = null;
     let president = players[president_index];
-    let nonPresidents = players.filter((p,idx) => { return idx !== president_index; });
+    let chancellorCandidates = players.filter((p,idx) =>
+      {
+        return idx !== president_index
+            && idx !== last_chancellor_index
+            && (players.length === 5 || idx !== last_president_index);
+      });
     president.socket.send({event: ClientProtocol.ClientEvent.NotifyPresident,
-                           otherPlayers: nonPresidents.map((p)=>{return p.name;})});
-    nonPresidents.map((p) => {
+                           otherPlayers: chancellorCandidates.map((p)=>{return p.name;})});
+
+    players.filter((p,idx) => { return idx !== president_index; })
+           .map((p) => {
         p.socket.send({event: ClientProtocol.ClientEvent.NotifyNotPresident, president: president.name});
     });
 }
@@ -126,10 +155,15 @@ export function playerReady(sock: Nes.Socket) {
     ready_to_play.push(player);
 
     if (ready_to_play.length === players.length) {
-        president_index = -1;
+        president_index = 0;
         startRound();
     }
  }
+
+export function advancePresident() {
+  last_president_index = president_index;
+  president_index = (president_index + 1) % players.length;
+}
 
 export function selectChancellor(name) {
     chancellor_index = players.findIndex((p) => { return p.name === name; });
@@ -157,6 +191,15 @@ function initDeck() {
 
 initDeck();
 
+function peekThree(): ClientProtocol.Card[] {
+    if (deck.length < 3) {
+      initDeck();
+    }
+
+    return deck.slice(-3);
+}
+
+
 function drawThree(): ClientProtocol.Card[] {
     if (deck.length < 3) {
       initDeck();
@@ -173,13 +216,92 @@ function drawCard(): ClientProtocol.Card {
     return deck.pop();
 }
 
-export function playCard (card: ClientProtocol.Card) {
+function liberalVictory() {
+  players.map((p) => {
+    p.socket.send({event: ClientProtocol.ClientEvent.LiberalVictory});
+  });
+}
+
+function fascistVictory() {
+  players.map((p) => {
+    p.socket.send({event: ClientProtocol.ClientEvent.FascistVictory});
+  });         
+}
+
+function investigationPower (sock: Nes.Socket) {
+  const targets = players.filter((p) => {
+    return !(p.socket === sock || p.beenInvestigated);
+  }).map((p) => { return p.name; });
+  sock.send({ event: ClientProtocol.ClientEvent.InvestigationPower, targets: targets });
+}
+
+function selectPresidentPower (sock: Nes.Socket) {
+  sock.send({ event: ClientProtocol.ClientEvent.SelectPresidentPower });
+}
+
+function peekCardPower (sock: Nes.Socket) {
+  sock.send({ event: ClientProtocol.ClientEvent.PeekCardPower, cards: peekThree() });
+}
+
+function killPower (sock: Nes.Socket) {
+  const targets = players.filter((p) => {
+    return !(p.socket === sock || p.dead);
+  }).map((p) => { return { name: p.name, role: p.role }; });
+
+  sock.send({ event: ClientProtocol.ClientEvent.PeekCardPower, targets: targets });  
+}
+
+export function playCard (card: ClientProtocol.Card, brexit: boolean) {
   if (card === ClientProtocol.Card.Liberal) {
      liberals_played += 1;
+
+     if (liberals_played == 5) {
+       liberalVictory();
+     }
   }
   else {
-     fascists_played += 1;
+    fascists_played += 1;
+
+    if (!brexit) {
+      let p = players[president_index].socket;
+      switch (fascists_played) {
+      case 1: {
+         if (players.length > 4) {
+           investigationPower(p);
+           return true;
+         }
+         break;
+      }
+      case 2: {
+         if (players.length > 6) {
+           investigationPower(p);
+           return true;
+         }
+         break;
+      }
+      case 3: {
+         if (players.length > 6) {
+           selectPresidentPower(p);
+           return true;
+         }
+         peekCardPower(p);
+         return true;
+      }
+      case 4: {
+         killPower(p);
+         return true;
+      }
+      case 5: {
+         killPower(p);
+         return true;
+      }
+      case 6: {
+        fascistVictory();
+      }
+      }
+    }
   }
+  return false;
 }
 
 export function discardCard (card: ClientProtocol.Card) {
@@ -197,6 +319,11 @@ export function vote(socket: Nes.Socket, vote: boolean) {
         //reveal votes
         players.map((p) => { p.voteHidden = false; });
 
+        if (players[chancellor_index].role == Role.Hitler && fascists_played >= 3) {
+          fascistVictory();
+          return;
+        }
+
         if (yes_votes > players.length / 2) {
             yes_votes = 0;
             n_votes = 0;
@@ -211,13 +338,14 @@ export function vote(socket: Nes.Socket, vote: boolean) {
         else {
             if (brexit_counter == 2) {
                 brexit_counter = 0;
-                playCard(drawCard());
+                playCard(drawCard(), true);
             }
             else {
                 brexit_counter += 1;
             }
             yes_votes = 0;
             n_votes = 0;
+            advancePresident();
             startRound();
         }
     }
@@ -232,5 +360,8 @@ export function getState() {
            nInDeck: deck.length,
            players: players.map((p) => { return { name: p.name, vote: p.vote, voteHidden: p.voteHidden }; }),
            president: players[president_index].name,
-           chancellor: chancellor_index ? players[chancellor_index].name : null };
+           lastPresident: last_president_index == null ? null : players[last_president_index].name,
+           chancellor: chancellor_index == null ? null : players[chancellor_index].name,
+           lastChancellor: last_chancellor_index == null ? null : players[last_chancellor_index].name
+         };
 }

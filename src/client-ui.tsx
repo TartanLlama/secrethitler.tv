@@ -18,6 +18,7 @@ function roleName(role: Role) {
     }
 }
 
+
 async function readyToPlay(event) {
     ReactDOM.render(
             <h1>Wait for everyone else to be ready.</h1>
@@ -28,6 +29,23 @@ async function readyToPlay(event) {
 
 async function selectChancellor(name) {
     await ws.request({method: 'POST', path: '/select_chancellor', payload: {name: name}});
+}
+
+async function investigationComplete(event) {
+  await ws.request('/investigation_complete');
+}
+
+async function investigate(name) {
+    const role = await ws.request({method: 'POST', path: '/investigate', payload: {name: name}});
+
+    ReactDOM.render(
+          <div>
+            <h1>{name} is {roleName(role.payload)}</h1>
+            <button onClick={investigationComplete}>Ready</button>
+          </div>
+                ,
+            document.getElementById('root'));
+
 }
 
 async function vote(v) {
@@ -50,6 +68,12 @@ async function discard(n: number) {
 }
 
 async function play(n: number) {
+    ReactDOM.render(
+        <h1>Wait for the next round</h1>
+            ,
+        document.getElementById('root'));
+
+
     const remainder = currentCards.filter((c,idx) => { return idx != n; });
     await ws.request({method: 'POST', path: '/play', payload: {play: currentCards[n], discard: remainder[0]}});
 }
@@ -60,6 +84,7 @@ function handleServerMessage(message) {
         ReactDOM.render(
             <div>
                 <h1>You are {roleName(message.role)}</h1>
+                { message.otherRoles.map((p) => { return <h2>{p.name} is {roleName(p.role)}</h2>; }) }
                 <button onClick={readyToPlay}>Ready</button>
             </div>
                 ,
@@ -149,6 +174,30 @@ function handleServerMessage(message) {
         );
     }
 
+    else if (message.event === ClientProtocol.ClientEvent.LiberalVictory) {
+        ReactDOM.render(
+            <h1>Liberals win!</h1>
+                ,
+            document.getElementById('root'));
+    }
+
+    else if (message.event === ClientProtocol.ClientEvent.FascistVictory) {
+        ReactDOM.render(
+            <h1>Fascists win!</h1>
+                ,
+            document.getElementById('root'));
+    }
+
+    else if (message.event === ClientProtocol.ClientEvent.InvestigationPower) {
+        ReactDOM.render(
+            <div>
+              <h1>Choose who to investigate</h1>
+              {message.targets.map((p) => { return <button onClick={(e)=>{investigate(p)}}>{p}</button>; })}
+            </div>
+                ,
+            document.getElementById('root'));
+    }
+
 }
 
 class NameForm extends React.Component {
@@ -183,9 +232,6 @@ class NameForm extends React.Component {
       </form>
     );
   }
-}
-
-function register(event) {
 }
 
 async function startGame(event) {

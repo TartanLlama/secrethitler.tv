@@ -1,6 +1,8 @@
 export enum ClientEvent { StartGame, AllReady, NotifyPresident, NotifyNotPresident,
                           StartVote,
-                          NotifyPresidentCards, NotifyWaitForCards, NotifyWaitForPlay, NotifyChancellorCards
+                          NotifyPresidentCards, NotifyWaitForCards, NotifyWaitForPlay, NotifyChancellorCards,
+                          InvestigationPower, SelectPresidentPower, PeekCardPower, KillPower,
+                          LiberalVictory, FascistVictory
                           }
 
 

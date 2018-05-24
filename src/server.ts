@@ -144,10 +144,34 @@ const init = async () => {
 
     server.route({
         method: 'POST',
+        path: '/investigate',
+        handler: (request, h) => {
+          return Game.investigate(request.payload['name']);
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/investigation_complete',
+        handler: (request, h) => {
+          Game.advancePresident();
+          Game.startRound();
+          updateUI();
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'POST',
         path: '/play',
         handler: (request, h) => {
-          Game.playCard(request.payload['play']);
+          const shouldWait = Game.playCard(request.payload['play'], false);
           Game.discardCard(request.payload['discard']);
+          if (shouldWait) {
+            updateUI();
+            return null;
+          }
+          Game.advancePresident();          
           Game.startRound();
           updateUI();
           return null;
