@@ -160,8 +160,10 @@ export function playerReady(sock: Nes.Socket) {
     }
  }
 
-export function advancePresident() {
-  last_president_index = president_index;
+export function advancePresident(brexit: boolean) {
+  if (!brexit) {
+    last_president_index = president_index;
+  }
   president_index = (president_index + 1) % players.length;
 }
 
@@ -240,7 +242,7 @@ function selectPresidentPower (sock: Nes.Socket) {
 }
 
 function peekCardPower (sock: Nes.Socket) {
-  sock.send({ event: ClientProtocol.ClientEvent.PeekCardPower, cards: peekThree() });
+  sock.send({ event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() });
 }
 
 function killPower (sock: Nes.Socket) {
@@ -248,7 +250,7 @@ function killPower (sock: Nes.Socket) {
     return !(p.socket === sock || p.dead);
   }).map((p) => { return { name: p.name, role: p.role }; });
 
-  sock.send({ event: ClientProtocol.ClientEvent.PeekCardPower, targets: targets });  
+  sock.send({ event: ClientProtocol.ClientEvent.KillPower, targets: targets });  
 }
 
 export function playCard (card: ClientProtocol.Card, brexit: boolean) {
@@ -266,11 +268,14 @@ export function playCard (card: ClientProtocol.Card, brexit: boolean) {
       let p = players[president_index].socket;
       switch (fascists_played) {
       case 1: {
-         if (players.length > 4) {
+
+         if (players.length > 8) {
            investigationPower(p);
            return true;
          }
-         break;
+               peekCardPower(p);
+               return true         ;
+
       }
       case 2: {
          if (players.length > 6) {
@@ -345,7 +350,7 @@ export function vote(socket: Nes.Socket, vote: boolean) {
             }
             yes_votes = 0;
             n_votes = 0;
-            advancePresident();
+            advancePresident(true);
             startRound();
         }
     }

@@ -60,6 +60,16 @@ const init = async () => {
 
     server.route({
         method: 'GET',
+        path: '/assets/{param*}',
+        handler: {
+            directory: {
+                path: './assets',
+            }
+        }
+    });
+    
+    server.route({
+        method: 'GET',
         path: '/node_modules/react-dom/{param*}',
         handler: {
             directory: {
@@ -154,7 +164,18 @@ const init = async () => {
         method: 'GET',
         path: '/investigation_complete',
         handler: (request, h) => {
-          Game.advancePresident();
+          Game.advancePresident(false);
+          Game.startRound();
+          updateUI();
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/peek_complete',
+        handler: (request, h) => {
+          Game.advancePresident(false);
           Game.startRound();
           updateUI();
           return null;
@@ -171,7 +192,7 @@ const init = async () => {
             updateUI();
             return null;
           }
-          Game.advancePresident();          
+          Game.advancePresident(false);          
           Game.startRound();
           updateUI();
           return null;

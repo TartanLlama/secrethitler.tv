@@ -18,7 +18,6 @@ function roleName(role: Role) {
     }
 }
 
-
 async function readyToPlay(event) {
     ReactDOM.render(
             <h1>Wait for everyone else to be ready.</h1>
@@ -29,6 +28,10 @@ async function readyToPlay(event) {
 
 async function selectChancellor(name) {
     await ws.request({method: 'POST', path: '/select_chancellor', payload: {name: name}});
+}
+
+async function peekComplete(event) {
+  await ws.request('/peek_complete');
 }
 
 async function investigationComplete(event) {
@@ -193,6 +196,19 @@ function handleServerMessage(message) {
             <div>
               <h1>Choose who to investigate</h1>
               {message.targets.map((p) => { return <button onClick={(e)=>{investigate(p)}}>{p}</button>; })}
+            </div>
+                ,
+            document.getElementById('root'));
+    }
+
+    else if (message.event === ClientProtocol.ClientEvent.PeekPower) {
+        ReactDOM.render(
+            <div>
+              { message.cards.map((c,idx) =>
+                { return <img src={`/assets/${ClientProtocol.cardToString(c).toLowerCase()}-policy.png`}
+                              style={{width: '30%'}}/>; })
+              }
+              <button onClick={peekComplete}>Ready</button>                
             </div>
                 ,
             document.getElementById('root'));
