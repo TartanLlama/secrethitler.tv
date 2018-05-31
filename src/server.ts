@@ -21,10 +21,21 @@ const server = new Hapi.Server({
 });
 
 function updateUI() {
-  console.log(Game.getState());
   uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
 }
 
+
+let sockets = {};
+let lastMessages = {};
+
+async function sendMessage (player: string, payload: ClientProtocol.Payload) {
+  lastMessages[player] = payload;
+  sockets[player].send(payload);
+}
+
+async function sendMessages (messages: Game.GameActionResults) {
+  Object.keys(messages).map((k) => { sendMessage(k, messages[k]); });
+}
 
 const init = async () => {
     await server.register(require('inert'));
@@ -91,20 +102,32 @@ const init = async () => {
         method: 'POST',
         path: '/register',
         handler: (request, h) => {
-          const success = Game.register_player({socket: request.socket, name: request.payload['name']});
+          sockets[request.payload['name']] = request.socket;
+          const result = Game.register_player({socket: request.socket, name: request.payload['name']});
           uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
-          return success;
+
+          if (result == Game.RegistrationResult.Success) {
+            return true;
+          }
+          else if (result == Game.RegistrationResult.NameAlreadyUsed) {
+            return "Name already in use";
+          }
+          else {
+            return "No space left";
+          }
         }
     });
     server.route({
         method: 'GET',
         path: '/start_game',
         handler: (request, h) => {
-          const success = Game.startGame();
-          if (success) {
+          const results = Game.startGame();
+          if (results != null) {
             updateUI();
+            sendMessages(results);
+            return true;
           }
-          return success;
+          return false;
         }
     });
 
@@ -112,10 +135,8 @@ const init = async () => {
         method: 'GET',
         path: '/ready_to_play',
         handler: (request, h) => {
-          let shouldStart =  Game.playerReady(request.socket);
-          if (shouldStart) {
-             server.broadcast({event: ClientProtocol.ClientEvent.AllReady});
-          }
+          sendMessages(Game.playerReady(request.socket));
+          updateUI();          
           return null;
         }
     });
@@ -124,7 +145,17 @@ const init = async () => {
         method: 'POST',
         path: '/select_chancellor',
         handler: (request, h) => {
-          Game.selectChancellor(request.payload['name']);
+          sendMessages(Game.selectChancellor(request.payload['name']));
+          updateUI();
+          return null;
+        }
+    });
+
+    server.route({
+        method: 'POST',
+        path: '/select_president',
+        handler: (request, h) => {
+          sendMessages(Game.selectPresident(request.payload['name']));
           updateUI();
           return null;
         }
@@ -134,7 +165,7 @@ const init = async () => {
         method: 'POST',
         path: '/vote',
         handler: (request, h) => {
-          Game.vote(request.socket, request.payload['vote']);
+          sendMessages(Game.vote(request.socket, request.payload['vote']));
           updateUI();
           return null;
         }
@@ -142,11 +173,22 @@ const init = async () => {
 
     server.route({
         method: 'POST',
+        path: '/kill',
+        handler: (request, h) => {
+          sendMessages(Game.kill(request.payload['name']));
+          updateUI();
+          return null;
+        }
+    });
+    
+    server.route({
+        method: 'POST',
         path: '/discard',
         handler: (request, h) => {
           Game.discardCard(request.payload['discard']);
-          Game.getChancellorSocket().send({event: ClientProtocol.ClientEvent.NotifyChancellorCards,
-                                           cards: request.payload['remainder']});
+          sendMessage(Game.getChancellorName(),
+                      {event: ClientProtocol.ClientEvent.NotifyChancellorCards,
+                       cards: request.payload['remainder']});
           updateUI();
           return null;
         }
@@ -165,7 +207,7 @@ const init = async () => {
         path: '/investigation_complete',
         handler: (request, h) => {
           Game.advancePresident(false);
-          Game.startRound();
+          sendMessages(Game.startRound());
           updateUI();
           return null;
         }
@@ -176,7 +218,7 @@ const init = async () => {
         path: '/peek_complete',
         handler: (request, h) => {
           Game.advancePresident(false);
-          Game.startRound();
+          sendMessages(Game.startRound());
           updateUI();
           return null;
         }
@@ -193,7 +235,7 @@ const init = async () => {
             return null;
           }
           Game.advancePresident(false);          
-          Game.startRound();
+          sendMessages(Game.startRound());
           updateUI();
           return null;
         }

@@ -3,6 +3,8 @@ module.paths.push('js')
 import * as Nes from 'nes'
 import * as ClientProtocol from 'client-protocol'
 
+let playing: boolean = false;
+
 export interface registration {
     socket: Nes.Socket;
     name: string;
@@ -10,12 +12,21 @@ export interface registration {
 
 let registrations: registration[] = []
 
-export function register_player(reg: registration): boolean {
-    if (registrations.length < 10) {
-        registrations.push(reg);
-        return true;
+export enum RegistrationResult {
+  Success, NameAlreadyUsed, NoSpace
+};
+
+export function register_player(reg: registration): RegistrationResult {
+    if (registrations.length == 10) {
+        return RegistrationResult.NoSpace;
     }
-    return false;
+
+    if (registrations.find((p) => { return p.name === reg.name })) {
+        return RegistrationResult.NameAlreadyUsed;
+    }
+    
+    registrations.push(reg);
+    return RegistrationResult.Success;
 }
 
 export interface player {
@@ -50,6 +61,10 @@ export function getPlayerNames(): string[] {
 
 export function getChancellorSocket(): Nes.Socket {
   return players[chancellor_index].socket;
+}
+
+export function getChancellorName(): string {
+  return players[chancellor_index].name;
 }
 
 export function getPresidentSocket(): Nes.Socket {
@@ -94,7 +109,9 @@ var last_president_index = null;
 var chancellor_index = null;
 var last_chancellor_index = null;
 
-export function startGame(): boolean {
+export type GameActionResults = { [playerName: string] : ClientProtocol.Payload };
+
+export function startGame(): GameActionResults {
     if (registrations.length > 4 && registrations.length <= 10) {
         state = State.Playing;
         const roles = shuffle(role_distributions[registrations.length]);
@@ -107,7 +124,11 @@ export function startGame(): boolean {
                      dead: false,
                      beenInvestigated: false };
         });
-        players.map((player) => {
+
+        shuffle(players);
+        president_index = 0;
+
+        return players.reduce((results, player) => {
             const otherRoles = (()=> {
               if (player.role === Role.Fascist
                   || ((players.length === 5 || players.length == 6) && player.role === Role.Hitler)) {
@@ -116,65 +137,84 @@ export function startGame(): boolean {
               }                              
               return [];
             })();
-            console.log({event: ClientProtocol.ClientEvent.StartGame,
-                                role: player.role, otherRoles: otherRoles});
-            player.socket.send({event: ClientProtocol.ClientEvent.StartGame,
-                                role: player.role, otherRoles: otherRoles});
-        });
-        shuffle(players);
-        president_index = 0;
-        return true;
+
+            results[player.name] = {event: ClientProtocol.ClientEvent.StartGame,
+                                    role: player.role, otherRoles: otherRoles};
+            return results;
+        }, {});
     }
-    return false;
+    
+    return {};
 }
 
 var ready_to_play: player[] = [];
 var brexit_counter = 0;
 
-export function startRound() {
+export function startRound(): GameActionResults {
     last_chancellor_index = chancellor_index;
     chancellor_index = null;
     let president = players[president_index];
     let chancellorCandidates = players.filter((p,idx) =>
       {
-        return idx !== president_index
+        return !p.dead
+            && idx !== president_index
             && idx !== last_chancellor_index
             && (players.length === 5 || idx !== last_president_index);
       });
-    president.socket.send({event: ClientProtocol.ClientEvent.NotifyPresident,
-                           otherPlayers: chancellorCandidates.map((p)=>{return p.name;})});
 
-    players.filter((p,idx) => { return idx !== president_index; })
-           .map((p) => {
-        p.socket.send({event: ClientProtocol.ClientEvent.NotifyNotPresident, president: president.name});
-    });
+    let results = {};
+    results[president.name] = {event: ClientProtocol.ClientEvent.NotifyPresident,
+                               otherPlayers: chancellorCandidates.map((p)=>{return p.name;})};
+
+    return players.filter((p,idx) => { return idx !== president_index && !p.dead; })
+                  .reduce((results, p) => {
+                      results[p.name] = {
+                        event: ClientProtocol.ClientEvent.NotifyNotPresident,
+                        president: president.name
+                      };
+                      return results;
+                  }, results);
 }
 
-export function playerReady(sock: Nes.Socket) {
+export function playerReady(sock: Nes.Socket): GameActionResults  {
     let player = players.find((p) => { return p.socket === sock; });
     ready_to_play.push(player);
 
     if (ready_to_play.length === players.length) {
         president_index = 0;
-        startRound();
+        return startRound();
     }
+
+    return null;
  }
 
 export function advancePresident(brexit: boolean) {
-  if (!brexit) {
-    last_president_index = president_index;
-  }
-  president_index = (president_index + 1) % players.length;
+  last_president_index = brexit ? null : president_index;
+
+  do {
+    president_index = (president_index + 1) % players.length;
+  } while(players[president_index].dead);
 }
 
-export function selectChancellor(name) {
+export function selectPresident(name): GameActionResults {
+    last_president_index = president_index;
+    president_index = players.findIndex((p) => { return p.name === name; });
+    return startRound();
+}
+
+
+export function selectChancellor(name): GameActionResults  {
     chancellor_index = players.findIndex((p) => { return p.name === name; });
-    players.map((player) => {
-        player.socket.send({event: ClientProtocol.ClientEvent.StartVote,
-                            president: players[president_index].name,
-                            chancellor: players[chancellor_index].name,
-                            brexit: brexit_counter == 2});
-    });
+    return players.filter((p) => { return !p.dead; })
+                  .reduce((results, player) => {
+                     results[player.name] = {
+                       event: ClientProtocol.ClientEvent.StartVote,
+                       president: players[president_index].name,
+                       chancellor: players[chancellor_index].name,
+                       brexit: brexit_counter == 2
+                     }
+                     return results;
+                   }, {});
  }
 
 var yes_votes = 0;
@@ -218,42 +258,66 @@ function drawCard(): ClientProtocol.Card {
     return deck.pop();
 }
 
-function liberalVictory() {
-  players.map((p) => {
-    p.socket.send({event: ClientProtocol.ClientEvent.LiberalVictory});
-  });
+function liberalVictory(): GameActionResults  {
+  return players.reduce((results, p) => {
+           results[p.name] = {event: ClientProtocol.ClientEvent.LiberalVictory};
+           return results;
+         }, {});
 }
 
-function fascistVictory() {
-  players.map((p) => {
-    p.socket.send({event: ClientProtocol.ClientEvent.FascistVictory});
-  });         
+function fascistVictory(): GameActionResults  {
+  return players.reduce((results, p) => {
+           results[p.name] = {event: ClientProtocol.ClientEvent.FascistVictory};
+           return results;
+         }, {});
 }
 
-function investigationPower (sock: Nes.Socket) {
+function investigationPower (sock: Nes.Socket): GameActionResults  {
   const targets = players.filter((p) => {
     return !(p.socket === sock || p.beenInvestigated);
   }).map((p) => { return p.name; });
-  sock.send({ event: ClientProtocol.ClientEvent.InvestigationPower, targets: targets });
+  let result = {};
+  result[players.find((p) => { return p.socket === sock; }).name] = { event: ClientProtocol.ClientEvent.InvestigationPower, targets: targets };
+  return result;
 }
 
-function selectPresidentPower (sock: Nes.Socket) {
-  sock.send({ event: ClientProtocol.ClientEvent.SelectPresidentPower });
+function selectPresidentPower (sock: Nes.Socket): GameActionResults  {
+  const targets = players.filter((p) => {
+    return !(p.socket === sock);
+  }).map((p) => { return p.name; });
+  let result = {};
+  result[players.find((p) => { return p.socket === sock; }).name] = { event: ClientProtocol.ClientEvent.SelectPresidentPower, targets: targets };
+  return result;
 }
 
-function peekCardPower (sock: Nes.Socket) {
-  sock.send({ event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() });
+function peekCardPower (sock: Nes.Socket): GameActionResults  {
+  let result = {};
+  result[players.find((p) => { return p.socket === sock; }).name] = { event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() };
+  return result;
 }
 
-function killPower (sock: Nes.Socket) {
+export function kill (name: string): GameActionResults  {
+  let killed = players.find((p) => { return name === p.name; });
+  killed.dead = true;
+
+  advancePresident(false);
+  let results = startRound();
+  results[killed.name] = { event: ClientProtocol.ClientEvent.Dead };
+
+  return results;
+}
+
+function killPower (sock: Nes.Socket): GameActionResults  {
   const targets = players.filter((p) => {
     return !(p.socket === sock || p.dead);
-  }).map((p) => { return { name: p.name, role: p.role }; });
+  }).map((p) => { return p.name; });
 
-  sock.send({ event: ClientProtocol.ClientEvent.KillPower, targets: targets });  
+  let result = {};
+  result[players.find((p) => { return p.socket === sock; }).name] = { event: ClientProtocol.ClientEvent.KillPower, targets: targets };
+  return result;
 }
 
-export function playCard (card: ClientProtocol.Card, brexit: boolean) {
+export function playCard (card: ClientProtocol.Card, brexit: boolean): GameActionResults  {
   if (card === ClientProtocol.Card.Liberal) {
      liberals_played += 1;
 
@@ -268,59 +332,52 @@ export function playCard (card: ClientProtocol.Card, brexit: boolean) {
       let p = players[president_index].socket;
       switch (fascists_played) {
       case 1: {
-
          if (players.length > 8) {
-           investigationPower(p);
-           return true;
+           return investigationPower(p);
          }
-               peekCardPower(p);
-               return true         ;
-
       }
       case 2: {
          if (players.length > 6) {
-           investigationPower(p);
-           return true;
+           return investigationPower(p);
          }
          break;
       }
       case 3: {
          if (players.length > 6) {
-           selectPresidentPower(p);
-           return true;
+           return selectPresidentPower(p);
          }
-         peekCardPower(p);
-         return true;
+         return peekCardPower(p);
       }
       case 4: {
-         killPower(p);
-         return true;
+         return killPower(p);
       }
       case 5: {
-         killPower(p);
-         return true;
+         return killPower(p);
       }
       case 6: {
-        fascistVictory();
+        return fascistVictory();
       }
       }
     }
   }
-  return false;
+  return null;
 }
 
 export function discardCard (card: ClientProtocol.Card) {
   discard_pile.push(card);
 }
 
-export function vote(socket: Nes.Socket, vote: boolean) {
+export function vote(socket: Nes.Socket, vote: boolean): GameActionResults  {
     let player = players.find((p) => { return p.socket === socket; });
     player.vote = vote;
     player.voteHidden = true;
 
     if (vote) yes_votes += 1;
     n_votes += 1;
-    if (n_votes == players.length) {
+
+    const alive_players: number = players.reduce((acc, p) => { return acc + (p.dead ? 0 : 1); }, 0);
+
+    if (n_votes == alive_players) {
         //reveal votes
         players.map((p) => { p.voteHidden = false; });
 
@@ -329,16 +386,24 @@ export function vote(socket: Nes.Socket, vote: boolean) {
           return;
         }
 
-        if (yes_votes > players.length / 2) {
+        if (yes_votes > alive_players / 2) {
             yes_votes = 0;
             n_votes = 0;
 
-            let nonActive = players.filter((p,idx) => { return idx !== president_index && idx !== chancellor_index; });
-            players[president_index].socket.send({event: ClientProtocol.ClientEvent.NotifyPresidentCards,
-                                   cards: drawThree()});
-            players[chancellor_index].socket.send({event: ClientProtocol.ClientEvent.NotifyWaitForCards});
-            nonActive.map((p) => { p.socket.send({event: ClientProtocol.ClientEvent.NotifyWaitForPlay}) });
+            let nonActive = players.filter((p,idx) => {
+                return !(idx == president_index || idx == chancellor_index || p.dead);
+            });
+
+            let results = {};
+
+            results[players[president_index].name] = {
+                                   event: ClientProtocol.ClientEvent.NotifyPresidentCards,
+                                   cards: drawThree()
+                                };
+            results[players[chancellor_index].name] = {event: ClientProtocol.ClientEvent.NotifyWaitForCards};
+            nonActive.map((p) => { results[p.name] = {event: ClientProtocol.ClientEvent.NotifyWaitForPlay}; });
             brexit_counter = 0;
+            return results;
         }
         else {
             if (brexit_counter == 2) {
@@ -351,7 +416,7 @@ export function vote(socket: Nes.Socket, vote: boolean) {
             yes_votes = 0;
             n_votes = 0;
             advancePresident(true);
-            startRound();
+            return startRound();
         }
     }
 }
@@ -363,7 +428,9 @@ export function getState() {
            nFascistsPlayed: fascists_played,
            nDiscarded: discard_pile.length,
            nInDeck: deck.length,
-           players: players.map((p) => { return { name: p.name, vote: p.vote, voteHidden: p.voteHidden }; }),
+           players: players.map((p) => {
+             return { name: p.name, vote: p.vote, voteHidden: p.voteHidden, dead: p.dead };
+           }),
            president: players[president_index].name,
            lastPresident: last_president_index == null ? null : players[last_president_index].name,
            chancellor: chancellor_index == null ? null : players[chancellor_index].name,

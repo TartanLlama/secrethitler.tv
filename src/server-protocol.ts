@@ -4,6 +4,7 @@ export interface Player {
   name: string;
   vote: boolean;
   voteHidden: boolean;
+  dead: boolean;
 };
 
 export interface GameState {

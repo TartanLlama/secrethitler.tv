@@ -98,7 +98,7 @@ class Players extends React.Component<{president: string, chancellor: string,
       {
         this.props.players.map((p)=>{
                          return <div style={{flex: '1', textAlign: 'center'}}>
-                                  <p>{p.name}</p>
+                                  { p.dead ? <p><del>{p.name}</del></p> : <p>{p.name}</p> }
                                   { p.vote == null ? "" : <VoteCard hidden={p.voteHidden} vote={p.vote}/> }
                                   { this.props.president === p.name ? <PresidentPlaque opacity={1}/> : "" }
                                   { this.props.lastPresident === p.name ? <PresidentPlaque opacity={0.5}/> : "" }

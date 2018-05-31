@@ -26,8 +26,16 @@ async function readyToPlay(event) {
     await ws.request('/ready_to_play');
 }
 
+async function selectPresident(name) {
+    await ws.request({method: 'POST', path: '/select_president', payload: {name: name}});
+}
+
 async function selectChancellor(name) {
     await ws.request({method: 'POST', path: '/select_chancellor', payload: {name: name}});
+}
+
+async function kill(name) {
+    await ws.request({method: 'POST', path: '/kill', payload: {name: name}});
 }
 
 async function peekComplete(event) {
@@ -90,14 +98,6 @@ function handleServerMessage(message) {
                 { message.otherRoles.map((p) => { return <h2>{p.name} is {roleName(p.role)}</h2>; }) }
                 <button onClick={readyToPlay}>Ready</button>
             </div>
-                ,
-            document.getElementById('root')
-        );
-    }
-
-    else if (message.event === ClientProtocol.ClientEvent.AllReady) {
-        ReactDOM.render(
-                <h1>Game Starting!</h1>
                 ,
             document.getElementById('root')
         );
@@ -214,6 +214,37 @@ function handleServerMessage(message) {
             document.getElementById('root'));
     }
 
+    else if (message.event === ClientProtocol.ClientEvent.KillPower) {
+        ReactDOM.render(
+            <div>
+                <h1>Who do you want to kill?</h1>
+                {message.targets.map((p) => { return <button onClick={(e)=>{kill(p)}}>{p}</button>; })}
+            </div>
+                ,
+            document.getElementById('root')
+        );
+    }
+
+    else if (message.event === ClientProtocol.ClientEvent.SelectPresidentPower) {
+        ReactDOM.render(
+            <div>
+                <h1>Select a president</h1>
+                {message.targets.map((p) => { return <button onClick={(e)=>{selectPresident(p)}}>{p}</button>; })}
+            </div>
+                ,
+            document.getElementById('root')
+        );
+    }
+
+    else if (message.event === ClientProtocol.ClientEvent.Dead) {
+        ReactDOM.render(
+            <h1>You are dead.</h1>, document.getElementById('root')
+        );
+    }
+}
+
+async function startGame(event) {
+    const response = await ws.request('/start_game');
 }
 
 class NameForm extends React.Component {
@@ -235,6 +266,12 @@ class NameForm extends React.Component {
     ws.onUpdate = handleServerMessage;
     await ws.connect();
     const response = await ws.request({method: 'POST', path: '/register', payload: { name: this.state['value'] }});
+    if (response.payload === true) {
+      ReactDOM.render(<button onClick={startGame}>Start Game</button>, document.getElementById('root'));
+    }
+    else {
+      alert(response.payload);
+    }
   }
 
   render() {
@@ -250,10 +287,6 @@ class NameForm extends React.Component {
   }
 }
 
-async function startGame(event) {
-    const response = await ws.request('/start_game');
-}
-
 const Root = styled.div`
   background: #36322a;
   border-color: #f7e1c3;
@@ -264,14 +297,8 @@ const Root = styled.div`
 `;
 
 ReactDOM.render(
-  <Root id="root"/>,  document.getElementById('container')
-);
-
-ReactDOM.render(
-    <div>
-      <NameForm />
-      <button onClick={startGame}>Start Game</button>
-    </div>
-  ,
-  document.getElementById('root')
+  <Root id="root">
+    <NameForm />
+  </Root>
+  ,document.getElementById('container')
 );
