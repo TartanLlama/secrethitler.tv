@@ -6,87 +6,87 @@ export enum ClientEvent { StartGame, NotifyPresident, NotifyNotPresident,
                           InvestigationPower, SelectPresidentPower, PeekPower, KillPower,
                           LiberalVictory, FascistVictory,
                           Dead
-                          }
+                        }
 
 interface StartGameEvent {
-  event: ClientEvent.StartGame;
-  role: Role;
-  otherRoles: { name: string, role: Role };
+    event: ClientEvent.StartGame;
+    role: Role;
+    otherRoles: { name: string, role: Role };
 }
 
 interface NotifyPresidentEvent {
-  event: ClientEvent.NotifyPresident;
-  otherPlayers: string[];
+    event: ClientEvent.NotifyPresident;
+    otherPlayers: string[];
 }
 
 interface NotifyNotPresidentEvent {
-  event: ClientEvent.NotifyNotPresident;
-  president: string;
+    event: ClientEvent.NotifyNotPresident;
+    president: string;
 }
 
 interface StartVoteEvent {
-  event: ClientEvent.StartVote;
-  president: string;
-  chancellor: string;
-  brexit: boolean;
+    event: ClientEvent.StartVote;
+    president: string;
+    chancellor: string;
+    brexit: boolean;
 }
 
 interface NotifyPresidentCardsEvent {
-  event: ClientEvent.NotifyPresidentCards;
-  cards: Card[];  
+    event: ClientEvent.NotifyPresidentCards;
+    cards: Card[];  
 }
 
 interface NotifyWaitForCardsEvent {
-  event: ClientEvent.NotifyWaitForCards;
+    event: ClientEvent.NotifyWaitForCards;
 }
 
 interface NotifyWaitForPlayEvent {
-  event: ClientEvent.NotifyWaitForPlay;
+    event: ClientEvent.NotifyWaitForPlay;
 }
 
 interface NotifyChancellorCardsEvent {
-  event: ClientEvent.NotifyChancellorCards;
-  cards: Card[];  
+    event: ClientEvent.NotifyChancellorCards;
+    cards: Card[];  
 }
 
 interface InvestigationPowerEvent {
-  event: ClientEvent.InvestigationPower;
-  targets: string[];
+    event: ClientEvent.InvestigationPower;
+    targets: string[];
 }
 
 interface SelectPresidentPowerEvent {
-  event: ClientEvent.SelectPresidentPower;
-  targets: string[];  
+    event: ClientEvent.SelectPresidentPower;
+    targets: string[];  
 }
 
 interface PeekPowerEvent {
-  event: ClientEvent.PeekPower;
-  cards: Card[];
+    event: ClientEvent.PeekPower;
+    cards: Card[];
 }
 
 interface KillPowerEvent {
-  event: ClientEvent.KillPower;
-  targets: string[];    
+    event: ClientEvent.KillPower;
+    targets: string[];    
 }
 
 interface LiberalVictoryEvent {
-  event: ClientEvent.LiberalVictory;
+    event: ClientEvent.LiberalVictory;
 }
 
 interface FascistVictoryEvent {
-  event: ClientEvent.FascistVictory;
+    event: ClientEvent.FascistVictory;
 }
 
 interface DeadEvent {
-  event: ClientEvent.Dead;
+    event: ClientEvent.Dead;
 }
 
 export type Payload = StartGameEvent | NotifyPresidentEvent | NotifyNotPresidentEvent |
-                          StartVoteEvent |
-                          NotifyPresidentCardsEvent | NotifyWaitForCardsEvent | NotifyWaitForPlayEvent | NotifyChancellorCardsEvent |
-                          InvestigationPowerEvent | SelectPresidentPowerEvent | PeekPowerEvent | KillPowerEvent |
-                          LiberalVictoryEvent | FascistVictoryEvent |
-                          DeadEvent;
+    StartVoteEvent |
+    NotifyPresidentCardsEvent | NotifyWaitForCardsEvent | NotifyWaitForPlayEvent | NotifyChancellorCardsEvent |
+    InvestigationPowerEvent | SelectPresidentPowerEvent | PeekPowerEvent | KillPowerEvent |
+    LiberalVictoryEvent | FascistVictoryEvent |
+    DeadEvent;
 
 export enum Card { Liberal, Fascist }
 

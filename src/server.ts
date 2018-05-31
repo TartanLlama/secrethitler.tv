@@ -21,7 +21,7 @@ const server = new Hapi.Server({
 });
 
 function updateUI() {
-  uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
+    uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
 }
 
 
@@ -29,12 +29,12 @@ let sockets = {};
 let lastMessages = {};
 
 async function sendMessage (player: string, payload: ClientProtocol.Payload) {
-  lastMessages[player] = payload;
-  sockets[player].send(payload);
+    lastMessages[player] = payload;
+    sockets[player].send(payload);
 }
 
 async function sendMessages (messages: Game.GameActionResults) {
-  Object.keys(messages).map((k) => { sendMessage(k, messages[k]); });
+    Object.keys(messages).map((k) => { sendMessage(k, messages[k]); });
 }
 
 const init = async () => {
@@ -93,8 +93,8 @@ const init = async () => {
         method: 'GET',
         path: '/register_ui',
         handler: (request, h) => {
-          uiSocket = request.socket;
-          return null;
+            uiSocket = request.socket;
+            return null;
         }
     });
 
@@ -102,32 +102,32 @@ const init = async () => {
         method: 'POST',
         path: '/register',
         handler: (request, h) => {
-          sockets[request.payload['name']] = request.socket;
-          const result = Game.register_player({socket: request.socket, name: request.payload['name']});
-          uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
+            sockets[request.payload['name']] = request.socket;
+            const result = Game.register_player({socket: request.socket, name: request.payload['name']});
+            uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
 
-          if (result == Game.RegistrationResult.Success) {
-            return true;
-          }
-          else if (result == Game.RegistrationResult.NameAlreadyUsed) {
-            return "Name already in use";
-          }
-          else {
-            return "No space left";
-          }
+            if (result == Game.RegistrationResult.Success) {
+                return true;
+            }
+            else if (result == Game.RegistrationResult.NameAlreadyUsed) {
+                return "Name already in use";
+            }
+            else {
+                return "No space left";
+            }
         }
     });
     server.route({
         method: 'GET',
         path: '/start_game',
         handler: (request, h) => {
-          const results = Game.startGame();
-          if (results != null) {
-            updateUI();
-            sendMessages(results);
-            return true;
-          }
-          return false;
+            const results = Game.startGame();
+            if (results != null) {
+                updateUI();
+                sendMessages(results);
+                return true;
+            }
+            return false;
         }
     });
 
@@ -135,9 +135,9 @@ const init = async () => {
         method: 'GET',
         path: '/ready_to_play',
         handler: (request, h) => {
-          sendMessages(Game.playerReady(request.socket));
-          updateUI();          
-          return null;
+            sendMessages(Game.playerReady(request.socket));
+            updateUI();          
+            return null;
         }
     });
 
@@ -145,9 +145,9 @@ const init = async () => {
         method: 'POST',
         path: '/select_chancellor',
         handler: (request, h) => {
-          sendMessages(Game.selectChancellor(request.payload['name']));
-          updateUI();
-          return null;
+            sendMessages(Game.selectChancellor(request.payload['name']));
+            updateUI();
+            return null;
         }
     });
 
@@ -155,9 +155,9 @@ const init = async () => {
         method: 'POST',
         path: '/select_president',
         handler: (request, h) => {
-          sendMessages(Game.selectPresident(request.payload['name']));
-          updateUI();
-          return null;
+            sendMessages(Game.selectPresident(request.payload['name']));
+            updateUI();
+            return null;
         }
     });
 
@@ -165,9 +165,9 @@ const init = async () => {
         method: 'POST',
         path: '/vote',
         handler: (request, h) => {
-          sendMessages(Game.vote(request.socket, request.payload['vote']));
-          updateUI();
-          return null;
+            sendMessages(Game.vote(request.socket, request.payload['vote']));
+            updateUI();
+            return null;
         }
     });
 
@@ -175,9 +175,9 @@ const init = async () => {
         method: 'POST',
         path: '/kill',
         handler: (request, h) => {
-          sendMessages(Game.kill(request.payload['name']));
-          updateUI();
-          return null;
+            sendMessages(Game.kill(request.payload['name']));
+            updateUI();
+            return null;
         }
     });
     
@@ -185,12 +185,12 @@ const init = async () => {
         method: 'POST',
         path: '/discard',
         handler: (request, h) => {
-          Game.discardCard(request.payload['discard']);
-          sendMessage(Game.getChancellorName(),
-                      {event: ClientProtocol.ClientEvent.NotifyChancellorCards,
-                       cards: request.payload['remainder']});
-          updateUI();
-          return null;
+            Game.discardCard(request.payload['discard']);
+            sendMessage(Game.getChancellorName(),
+                        {event: ClientProtocol.ClientEvent.NotifyChancellorCards,
+                         cards: request.payload['remainder']});
+            updateUI();
+            return null;
         }
     });
 
@@ -198,7 +198,7 @@ const init = async () => {
         method: 'POST',
         path: '/investigate',
         handler: (request, h) => {
-          return Game.investigate(request.payload['name']);
+            return Game.investigate(request.payload['name']);
         }
     });
 
@@ -206,10 +206,10 @@ const init = async () => {
         method: 'GET',
         path: '/investigation_complete',
         handler: (request, h) => {
-          Game.advancePresident(false);
-          sendMessages(Game.startRound());
-          updateUI();
-          return null;
+            Game.advancePresident(false);
+            sendMessages(Game.startRound());
+            updateUI();
+            return null;
         }
     });
 
@@ -217,10 +217,10 @@ const init = async () => {
         method: 'GET',
         path: '/peek_complete',
         handler: (request, h) => {
-          Game.advancePresident(false);
-          sendMessages(Game.startRound());
-          updateUI();
-          return null;
+            Game.advancePresident(false);
+            sendMessages(Game.startRound());
+            updateUI();
+            return null;
         }
     });
 
@@ -228,16 +228,16 @@ const init = async () => {
         method: 'POST',
         path: '/play',
         handler: (request, h) => {
-          const shouldWait = Game.playCard(request.payload['play'], false);
-          Game.discardCard(request.payload['discard']);
-          if (shouldWait) {
+            const shouldWait = Game.playCard(request.payload['play'], false);
+            Game.discardCard(request.payload['discard']);
+            if (shouldWait) {
+                updateUI();
+                return null;
+            }
+            Game.advancePresident(false);          
+            sendMessages(Game.startRound());
             updateUI();
             return null;
-          }
-          Game.advancePresident(false);          
-          sendMessages(Game.startRound());
-          updateUI();
-          return null;
         }
     });
 
