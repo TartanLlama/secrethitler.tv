@@ -24,17 +24,130 @@ function updateUI() {
     uiSocket.send({event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState()});
 }
 
-
 let sockets = {};
 let lastMessages = {};
 
-async function sendMessage (player: string, payload: ClientProtocol.Payload) {
+function sockToName (sock: Nes.Socket) {
+    return Object.keys(sockets).find(key => sockets[key] === sock);    
+}
+
+function sendMessage (player: string, payload: ClientProtocol.Payload) {
     lastMessages[player] = payload;
     sockets[player].send(payload);
 }
 
-async function sendMessages (messages: Game.GameActionResults) {
-    Object.keys(messages).map((k) => { sendMessage(k, messages[k]); });
+function sendMessages (messages: Game.GameActionResults) {
+    Object.keys(messages).map(k => sendMessage(k, messages[k]));
+}
+
+function handleClientAction (sock: Nes.Socket, payload: ClientProtocol.ActionPayload) {
+    switch (payload.action) {
+        case ClientProtocol.ClientAction.Register: {
+            sockets[payload['name']] = sock;
+            const result = Game.register_player(payload.name);
+            uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
+
+            if (result == Game.RegistrationResult.Success) {
+                return true;
+            }
+            else if (result == Game.RegistrationResult.NameAlreadyUsed) {
+                return "Name already in use";
+            }
+            else {
+                return "No space left";
+            }
+        }
+
+        case ClientProtocol.ClientAction.StartGame: {
+            const results = Game.startGame();
+            if (results != null) {
+                updateUI();
+                sendMessages(results);
+                return true;
+            }
+            return false;            
+        }
+            
+        case ClientProtocol.ClientAction.Ready: {
+            sendMessages(Game.playerReady(sockToName(sock)));
+            updateUI();          
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.SelectChancellor: {
+            sendMessages(Game.selectChancellor(payload.name));
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.SelectPresident: {
+            sendMessages(Game.selectPresident(payload.name));
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.Vote: {
+            sendMessages(Game.vote(sockToName(sock), payload.vote));
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.Discard: {
+            Game.discardCard(payload['discard']);
+            sendMessage(Game.getChancellorName(),
+                        {event: ClientProtocol.ClientEvent.NotifyChancellorCards,
+                         cards: payload['remainder']});
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.Play: {
+            const shouldWait = Game.playCard(payload['play'], false);
+            Game.discardCard(payload['discard']);
+            if (shouldWait) {
+                updateUI();
+                return null;
+            }
+            Game.advancePresident(false);          
+            sendMessages(Game.startRound());
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.Kill: {
+            sendMessages(Game.kill(payload['name']));
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.Investigate: {
+            return Game.investigate(payload['name']);            
+        }
+            
+        case ClientProtocol.ClientAction.InvestigationComplete: {
+            Game.advancePresident(false);
+            sendMessages(Game.startRound());
+            updateUI();
+            return null;            
+        }
+            
+        case ClientProtocol.ClientAction.PeekComplete: {
+            Game.advancePresident(false);
+            sendMessages(Game.startRound());
+            updateUI();
+            return null;            
+        }
+
+        case ClientProtocol.ClientAction.GetPlayerList: {
+            return Game.getPlayerNames();
+        }
+
+        case ClientProtocol.ClientAction.Reconnect: {
+            sockets[payload.name] = sock;
+            sock.send(lastMessages[payload.name]);
+            return null;
+        }
+    }
 }
 
 const init = async () => {
@@ -44,8 +157,11 @@ const init = async () => {
     server.route({
         method: 'GET',
         path: '/',
-        handler: {
-            file: './html/client.html'
+        handler: (request, h) => {
+            if (Game.gameOngoing()) {
+                return h.file('./html/client-ongoing.html');
+            }
+            return h.file('./html/client.html');
         }
     });
 
@@ -100,147 +216,11 @@ const init = async () => {
 
     server.route({
         method: 'POST',
-        path: '/register',
+        path: '/client_action',
         handler: (request, h) => {
-            sockets[request.payload['name']] = request.socket;
-            const result = Game.register_player({socket: request.socket, name: request.payload['name']});
-            uiSocket.send({event: ServerProtocol.ServerEvent.DisplayRegistered, names: Game.getPlayerNames()});
-
-            if (result == Game.RegistrationResult.Success) {
-                return true;
-            }
-            else if (result == Game.RegistrationResult.NameAlreadyUsed) {
-                return "Name already in use";
-            }
-            else {
-                return "No space left";
-            }
+            return handleClientAction(request.socket, request.payload as ClientProtocol.ActionPayload);
         }
     });
-    server.route({
-        method: 'GET',
-        path: '/start_game',
-        handler: (request, h) => {
-            const results = Game.startGame();
-            if (results != null) {
-                updateUI();
-                sendMessages(results);
-                return true;
-            }
-            return false;
-        }
-    });
-
-    server.route({
-        method: 'GET',
-        path: '/ready_to_play',
-        handler: (request, h) => {
-            sendMessages(Game.playerReady(request.socket));
-            updateUI();          
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/select_chancellor',
-        handler: (request, h) => {
-            sendMessages(Game.selectChancellor(request.payload['name']));
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/select_president',
-        handler: (request, h) => {
-            sendMessages(Game.selectPresident(request.payload['name']));
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/vote',
-        handler: (request, h) => {
-            sendMessages(Game.vote(request.socket, request.payload['vote']));
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/kill',
-        handler: (request, h) => {
-            sendMessages(Game.kill(request.payload['name']));
-            updateUI();
-            return null;
-        }
-    });
-    
-    server.route({
-        method: 'POST',
-        path: '/discard',
-        handler: (request, h) => {
-            Game.discardCard(request.payload['discard']);
-            sendMessage(Game.getChancellorName(),
-                        {event: ClientProtocol.ClientEvent.NotifyChancellorCards,
-                         cards: request.payload['remainder']});
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/investigate',
-        handler: (request, h) => {
-            return Game.investigate(request.payload['name']);
-        }
-    });
-
-    server.route({
-        method: 'GET',
-        path: '/investigation_complete',
-        handler: (request, h) => {
-            Game.advancePresident(false);
-            sendMessages(Game.startRound());
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'GET',
-        path: '/peek_complete',
-        handler: (request, h) => {
-            Game.advancePresident(false);
-            sendMessages(Game.startRound());
-            updateUI();
-            return null;
-        }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/play',
-        handler: (request, h) => {
-            const shouldWait = Game.playCard(request.payload['play'], false);
-            Game.discardCard(request.payload['discard']);
-            if (shouldWait) {
-                updateUI();
-                return null;
-            }
-            Game.advancePresident(false);          
-            sendMessages(Game.startRound());
-            updateUI();
-            return null;
-        }
-    });
-
 
     await server.start();
     console.log(`Server running at: ${server.info.uri}`);

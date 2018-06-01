@@ -1,10 +1,19 @@
 import * as Nes from 'nes';
 import * as ClientProtocol from 'client-protocol';
+import {ClientAction} from 'client-protocol';
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import styled from 'styled-components';
 
-var ws: Nes.Client;
+const ip = window.location.hostname;
+var ws = new Nes.Client(`ws://${ip}:3000`);
+ws.onUpdate = handleServerMessage;
+try {
+    ws.connect().then(f => showGUI());
+}
+catch(err) {
+  alert("Failed to connect");
+}      
 
 var currentCards: ClientProtocol.Card[];
 
@@ -18,36 +27,45 @@ function roleName(role: Role) {
     }
 }
 
+async function sendAction(action: ClientAction, payload: any = {}) {
+    payload.action = action;
+    return await ws.request({method: 'POST', path: '/client_action', payload: payload});
+}
+
+async function reconnect(name) {
+    await sendAction(ClientAction.Reconnect, {name: name});
+}
+
 async function readyToPlay(event) {
     ReactDOM.render(
             <h1>Wait for everyone else to be ready.</h1>
                 ,
             document.getElementById('root'));
-    await ws.request('/ready_to_play');
+    await sendAction(ClientAction.Ready, {name: name});
 }
 
 async function selectPresident(name) {
-    await ws.request({method: 'POST', path: '/select_president', payload: {name: name}});
+    await sendAction(ClientAction.SelectPresident, {name: name});
 }
 
 async function selectChancellor(name) {
-    await ws.request({method: 'POST', path: '/select_chancellor', payload: {name: name}});
+    await sendAction(ClientAction.SelectChancellor, {name: name});    
 }
 
 async function kill(name) {
-    await ws.request({method: 'POST', path: '/kill', payload: {name: name}});
+    await sendAction(ClientAction.Kill, {name: name});    
 }
 
 async function peekComplete(event) {
-  await ws.request('/peek_complete');
+    await sendAction(ClientAction.PeekComplete);    
 }
 
 async function investigationComplete(event) {
-  await ws.request('/investigation_complete');
+    await sendAction(ClientAction.InvestigationComplete);        
 }
 
 async function investigate(name) {
-    const role = await ws.request({method: 'POST', path: '/investigate', payload: {name: name}});
+    const role = await sendAction(ClientAction.Investigate, {name: name});    
 
     ReactDOM.render(
           <div>
@@ -65,7 +83,7 @@ async function vote(v) {
                 ,
             document.getElementById('root'));
 
-    await ws.request({method: 'POST', path: '/vote', payload: {vote: v}});
+    await sendAction(ClientAction.Vote, {vote: v});        
 }
 
 async function discard(n: number) {
@@ -75,7 +93,7 @@ async function discard(n: number) {
         document.getElementById('root'));
 
     const remainder = currentCards.filter((c,idx) => { return idx != n; });
-    await ws.request({method: 'POST', path: '/discard', payload: {discard: currentCards[n], remainder: remainder}});
+    await sendAction(ClientAction.Discard, {discard: currentCards[n], remainder: remainder});        
 }
 
 async function play(n: number) {
@@ -86,7 +104,7 @@ async function play(n: number) {
 
 
     const remainder = currentCards.filter((c,idx) => { return idx != n; });
-    await ws.request({method: 'POST', path: '/play', payload: {play: currentCards[n], discard: remainder[0]}});
+    await sendAction(ClientAction.Play, {play: currentCards[n], discard: remainder[0]});        
 }
 
 
@@ -244,28 +262,25 @@ function handleServerMessage(message) {
 }
 
 async function startGame(event) {
-    const response = await ws.request('/start_game');
+    await sendAction(ClientAction.StartGame);
 }
 
 class NameForm extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {value: ''};
+    this.state = {name: ''};
 
-    this.handleChange = this.handleChange.bind(this);
+    this.handleNameChange = this.handleNameChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  handleChange(event) {
-    this.setState({value: event.target.value});
+  handleNameChange(event) {
+    this.setState({name: event.target.value});
   }
 
   async handleSubmit(event) {
     event.preventDefault();
-    ws = new Nes.Client('ws://localhost:3000');
-    ws.onUpdate = handleServerMessage;
-    await ws.connect();
-    const response = await ws.request({method: 'POST', path: '/register', payload: { name: this.state['value'] }});
+    const response = await sendAction(ClientAction.Register, {name: this.state['name']});
     if (response.payload === true) {
       ReactDOM.render(<button onClick={startGame}>Start Game</button>, document.getElementById('root'));
     }
@@ -279,13 +294,12 @@ class NameForm extends React.Component {
       <form onSubmit={this.handleSubmit}>
         <label>
           Name:
-          <input type="text" value={this.state['value']} onChange={this.handleChange} />
+          <input type="text" value={this.state['name']} onChange={this.handleNameChange} />
         </label>
         <input type="submit" value="Register" />
       </form>
     );
-  }
-}
+  }}
 
 const Root = styled.div`
   background: #36322a;
@@ -296,9 +310,27 @@ const Root = styled.div`
   color: #f7e1c3;
 `;
 
-ReactDOM.render(
-  <Root id="root">
-    <NameForm />
-  </Root>
-  ,document.getElementById('container')
-);
+async function showReconnectGUI() {
+    const players = await sendAction(ClientAction.GetPlayerList);
+
+    ReactDOM.render(
+      <Root id="root">
+        <h1>Reconnect</h1>
+        {players.payload.map(p => <button onClick={e => reconnect(p)}>{p}</button>)}
+      </Root>
+      ,document.getElementById('container'));
+}  
+
+async function showGUI() {
+  if (document.getElementById('gameOngoing')) {
+    showReconnectGUI();
+  }
+  else {
+  ReactDOM.render(
+    <Root id="root">
+      <NameForm />
+    </Root>
+    ,document.getElementById('container')
+  );
+  }
+}

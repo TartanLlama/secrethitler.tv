@@ -1,12 +1,23 @@
 export enum Role {Liberal, Fascist, Hitler}
+export enum Card { Liberal, Fascist }
 
-export enum ClientEvent { StartGame, NotifyPresident, NotifyNotPresident,
-                          StartVote,
-                          NotifyPresidentCards, NotifyWaitForCards, NotifyWaitForPlay, NotifyChancellorCards,
-                          InvestigationPower, SelectPresidentPower, PeekPower, KillPower,
-                          LiberalVictory, FascistVictory,
-                          Dead
-                        }
+export function cardToString (card: Card) {
+    if (card == Card.Liberal) return "Liberal";
+    return "Fascist";
+}
+
+///////////////////////////////////////////////
+// Events sent from the server to the client //
+///////////////////////////////////////////////
+
+export enum ClientEvent {
+    StartGame, NotifyPresident, NotifyNotPresident,
+    StartVote,
+    NotifyPresidentCards, NotifyWaitForCards, NotifyWaitForPlay, NotifyChancellorCards,
+    InvestigationPower, SelectPresidentPower, PeekPower, KillPower,
+    LiberalVictory, FascistVictory,
+    Dead
+}
 
 interface StartGameEvent {
     event: ClientEvent.StartGame;
@@ -88,9 +99,80 @@ export type Payload = StartGameEvent | NotifyPresidentEvent | NotifyNotPresident
     LiberalVictoryEvent | FascistVictoryEvent |
     DeadEvent;
 
-export enum Card { Liberal, Fascist }
 
-export function cardToString (card: Card) {
-    if (card == Card.Liberal) return "Liberal";
-    return "Fascist";
+////////////////////////////////////////////////
+// Actions sent from the client to the server //
+////////////////////////////////////////////////
+
+export enum ClientAction {
+    Register, StartGame, Ready,
+    SelectChancellor, SelectPresident,
+    Vote, Discard, Play,
+    Kill, Investigate, InvestigationComplete, PeekComplete,
+    GetPlayerList, Reconnect
 }
+
+interface RegisterAction {
+    action: ClientAction.Register;
+    name: string;
+}
+interface StartGameAction {
+    action: ClientAction.StartGame;
+}
+interface ReadyAction {
+    action: ClientAction.Ready;
+}
+interface SelectChancellorAction {
+    action: ClientAction.SelectChancellor;
+    name: string;
+}
+interface SelectPresidentAction {
+    action: ClientAction.SelectPresident;
+    name: string;    
+}
+interface VoteAction {
+    action: ClientAction.Vote;
+    vote: boolean;
+}
+interface DiscardAction {
+    action: ClientAction.Discard;
+    discard: Card;
+    remainder: Card[];
+}
+interface PlayAction {
+    action: ClientAction.Play;
+    play: Card;
+    discard: Card;
+}
+interface KillAction {
+    action: ClientAction.Kill;
+    name: string;
+}
+interface InvestigateAction {
+    action: ClientAction.Investigate;
+    name: string;    
+}
+interface InvestigationCompleteAction {
+    action: ClientAction.InvestigationComplete;
+}
+interface PeekCompleteAction {
+    action: ClientAction.PeekComplete;
+}
+interface GetPlayerListAction {
+    action: ClientAction.GetPlayerList;
+}
+interface ReconnectAction {
+    action: ClientAction.Reconnect;
+    name: string;
+}
+
+export type ActionPayload =
+    RegisterAction | StartGameAction | ReadyAction |
+    SelectChancellorAction | SelectPresidentAction |
+    VoteAction | DiscardAction | PlayAction |
+    KillAction | InvestigateAction | InvestigationCompleteAction | PeekCompleteAction |
+    GetPlayerListAction | ReconnectAction;
+
+
+
+
