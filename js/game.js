@@ -144,7 +144,7 @@ function playerReady(name) {
         president_index = 0;
         return startRound();
     }
-    return null;
+    return {};
 }
 exports.playerReady = playerReady;
 function advancePresident(brexit) {
@@ -237,6 +237,7 @@ function peekCardPower(name) {
     result[name] = { event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() };
     return result;
 }
+exports.peekCardPower = peekCardPower;
 function kill(name) {
     var killed = players.find(function (p) { return name === p.name; });
     killed.dead = true;
@@ -294,7 +295,8 @@ function playCard(card, brexit) {
             }
         }
     }
-    return null;
+    advancePresident(false);
+    return startRound();
 }
 exports.playCard = playCard;
 function discardCard(card) {

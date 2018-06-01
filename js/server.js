@@ -114,14 +114,10 @@ function handleClientAction(sock, payload) {
             return null;
         }
         case ClientProtocol.ClientAction.Play: {
-            var shouldWait = Game.playCard(payload['play'], false);
             Game.discardCard(payload['discard']);
-            if (shouldWait) {
-                updateUI();
-                return null;
-            }
-            Game.advancePresident(false);
-            sendMessages(Game.startRound());
+            var played = Game.playCard(payload['play'], false);
+            console.log(played);
+            sendMessages(played);
             updateUI();
             return null;
         }

@@ -174,7 +174,7 @@ export function playerReady(name: string): GameActionResults  {
         return startRound();
     }
 
-    return null;
+    return {};
 }
 
 export function advancePresident(brexit: boolean) {
@@ -280,7 +280,7 @@ function selectPresidentPower (name: string): GameActionResults  {
     return result;
 }
 
-function peekCardPower (name: string): GameActionResults  {
+export function peekCardPower (name: string): GameActionResults  {
     let result = {};
     result[name] = { event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() };
     return result;
@@ -349,7 +349,9 @@ export function playCard (card: ClientProtocol.Card, brexit: boolean): GameActio
             }
         }
     }
-    return null;
+
+    advancePresident(false);
+    return startRound();
 }
 
 export function discardCard (card: ClientProtocol.Card) {

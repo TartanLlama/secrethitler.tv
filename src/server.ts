@@ -102,14 +102,8 @@ function handleClientAction (sock: Nes.Socket, payload: ClientProtocol.ActionPay
         }
             
         case ClientProtocol.ClientAction.Play: {
-            const shouldWait = Game.playCard(payload['play'], false);
             Game.discardCard(payload['discard']);
-            if (shouldWait) {
-                updateUI();
-                return null;
-            }
-            Game.advancePresident(false);          
-            sendMessages(Game.startRound());
+            sendMessages(Game.playCard(payload['play'], false));
             updateUI();
             return null;            
         }
