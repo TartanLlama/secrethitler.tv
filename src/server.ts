@@ -16,8 +16,7 @@ var uiSocket: Nes.Socket;
 nw.Window.open("./html/server.html")
 
 const server = new Hapi.Server({
-    port: 3000,
-    host: 'localhost'
+    port: 3000
 });
 
 function updateUI() {

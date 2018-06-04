@@ -43,8 +43,7 @@ var ServerProtocol = require("server-protocol");
 var uiSocket;
 nw.Window.open("./html/server.html");
 var server = new Hapi.Server({
-    port: 3000,
-    host: 'localhost'
+    port: 3000
 });
 function updateUI() {
     uiSocket.send({ event: ServerProtocol.ServerEvent.DisplayBoard, state: Game.getState() });
