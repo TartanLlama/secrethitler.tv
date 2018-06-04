@@ -119,6 +119,7 @@ function handleClientAction (sock: Nes.Socket, payload: ClientProtocol.ActionPay
         }
             
         case ClientProtocol.ClientAction.InvestigationComplete: {
+            Game.endRound();
             Game.advancePresident(false);
             sendMessages(Game.startRound());
             updateUI();
@@ -126,6 +127,7 @@ function handleClientAction (sock: Nes.Socket, payload: ClientProtocol.ActionPay
         }
             
         case ClientProtocol.ClientAction.PeekComplete: {
+            Game.endRound();            
             Game.advancePresident(false);
             sendMessages(Game.startRound());
             updateUI();

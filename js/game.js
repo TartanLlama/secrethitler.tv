@@ -2,11 +2,14 @@
 exports.__esModule = true;
 module.paths.push('js');
 var ClientProtocol = require("client-protocol");
+var GameDB = require("game-db");
 var playing = false;
 function gameOngoing() {
     return playing;
 }
 exports.gameOngoing = gameOngoing;
+var currentRound;
+var gameLog = { rounds: [] };
 var registrations = [];
 var RegistrationResult;
 (function (RegistrationResult) {
@@ -30,6 +33,7 @@ var players = [];
 function initialise_roles(roles) {
 }
 function investigate(name) {
+    currentRound.investigated = name;
     var role = players.find(function (p) { return name === p.name; }).role;
     return role == Role.Hitler ? Role.Fascist : role;
 }
@@ -94,6 +98,10 @@ function startGame() {
         });
         shuffle(players);
         president_index = 0;
+        gameLog.roles = players.reduce(function (results, player) {
+            results[player.name] = player.role;
+            return results;
+        }, {});
         return players.reduce(function (results, player) {
             var otherRoles = (function () {
                 if (player.role === Role.Fascist
@@ -137,6 +145,11 @@ function startRound() {
     }, results);
 }
 exports.startRound = startRound;
+function endRound() {
+    gameLog.rounds.push(currentRound);
+    currentRound = null;
+}
+exports.endRound = endRound;
 function playerReady(name) {
     var player = players.find(function (p) { return p.name === name; });
     ready_to_play.push(player);
@@ -157,6 +170,7 @@ exports.advancePresident = advancePresident;
 function selectPresident(name) {
     last_president_index = president_index;
     president_index = players.findIndex(function (p) { return p.name === name; });
+    endRound();
     return startRound();
 }
 exports.selectPresident = selectPresident;
@@ -211,12 +225,17 @@ function sendToAll(event) {
         return results;
     }, {});
 }
-function liberalVictory() {
-    return sendToAll(ClientProtocol.ClientEvent.LiberalVictory);
+function endGame(liberalWin) {
+    endRound();
+    gameLog.liberalWin = liberalWin;
+    gameLog.liberalsPlayed = liberals_played;
+    gameLog.fascistsPlayed = fascists_played;
+    GameDB.writeGameLog(gameLog);
+    return sendToAll(liberalWin ? ClientProtocol.ClientEvent.LiberalVictory
+        : ClientProtocol.ClientEvent.FascistVictory);
 }
-function fascistVictory() {
-    return sendToAll(ClientProtocol.ClientEvent.FascistVictory);
-}
+var liberalVictory = function () { return endGame(true); };
+var fascistVictory = function () { return endGame(false); };
 function investigationPower(name) {
     var targets = players.filter(function (p) {
         return !(p.name === name || p.beenInvestigated);
@@ -239,8 +258,10 @@ function peekCardPower(name) {
 }
 exports.peekCardPower = peekCardPower;
 function kill(name) {
+    currentRound.killed = name;
     var killed = players.find(function (p) { return name === p.name; });
     killed.dead = true;
+    endRound();
     advancePresident(false);
     var results = startRound();
     results[killed.name] = { event: ClientProtocol.ClientEvent.Dead };
@@ -255,6 +276,7 @@ function killPower(name) {
     return result;
 }
 function playCard(card, brexit) {
+    currentRound.cardPlayed = card;
     if (card === ClientProtocol.Card.Liberal) {
         liberals_played += 1;
         if (liberals_played == 5) {
@@ -295,10 +317,24 @@ function playCard(card, brexit) {
             }
         }
     }
+    endRound();
     advancePresident(false);
     return startRound();
 }
 exports.playCard = playCard;
+function chancellorDiscard(card, remainder) {
+    currentRound.chancellorDiscarded = (card === ClientProtocol.Card.Liberal &&
+        remainder === ClientProtocol.Card.Fascist);
+    discardCard(card);
+}
+exports.chancellorDiscard = chancellorDiscard;
+function presidentDiscard(card, remainder) {
+    currentRound.presidentDiscarded = (card === ClientProtocol.Card.Liberal &&
+        remainder[0] === ClientProtocol.Card.Fascist &&
+        remainder[1] === ClientProtocol.Card.Fascist);
+    discardCard(card);
+}
+exports.presidentDiscard = presidentDiscard;
 function discardCard(card) {
     discard_pile.push(card);
 }
@@ -312,12 +348,18 @@ function vote(name, vote) {
     n_votes += 1;
     var alive_players = players.reduce(function (acc, p) { return acc + (p.dead ? 0 : 1); }, 0);
     if (n_votes == alive_players) {
+        currentRound = {
+            president: players[president_index].name,
+            chancellor: players[chancellor_index].name,
+            votes: players.reduce(function (res, p) { res[p.name] = p.vote; return res; }, {})
+        };
         //reveal votes
         players.map(function (p) { return p.voteHidden = false; });
         if (players[chancellor_index].role == Role.Hitler && fascists_played >= 3) {
             return fascistVictory();
         }
         if (yes_votes > alive_players / 2) {
+            currentRound.wentThrough = true;
             yes_votes = 0;
             n_votes = 0;
             var nonActive = players.filter(function (p, idx) { return !(idx == president_index || idx == chancellor_index || p.dead); });
@@ -332,15 +374,18 @@ function vote(name, vote) {
             return results_1;
         }
         else {
+            currentRound.wentThrough = false;
             if (brexit_counter == 2) {
+                currentRound.brexit = true;
                 brexit_counter = 0;
-                playCard(drawCard(), true);
+                return playCard(drawCard(), true);
             }
             else {
                 brexit_counter += 1;
             }
             yes_votes = 0;
             n_votes = 0;
+            endRound();
             advancePresident(true);
             return startRound();
         }

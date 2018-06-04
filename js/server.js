@@ -115,9 +115,7 @@ function handleClientAction(sock, payload) {
         }
         case ClientProtocol.ClientAction.Play: {
             Game.discardCard(payload['discard']);
-            var played = Game.playCard(payload['play'], false);
-            console.log(played);
-            sendMessages(played);
+            sendMessages(Game.playCard(payload['play'], false));
             updateUI();
             return null;
         }
@@ -130,12 +128,14 @@ function handleClientAction(sock, payload) {
             return Game.investigate(payload['name']);
         }
         case ClientProtocol.ClientAction.InvestigationComplete: {
+            Game.endRound();
             Game.advancePresident(false);
             sendMessages(Game.startRound());
             updateUI();
             return null;
         }
         case ClientProtocol.ClientAction.PeekComplete: {
+            Game.endRound();
             Game.advancePresident(false);
             sendMessages(Game.startRound());
             updateUI();

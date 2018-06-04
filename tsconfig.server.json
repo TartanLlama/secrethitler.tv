@@ -13,6 +13,7 @@
         "src/server.ts",
         "src/client-protocol.ts",
         "src/server-protocol.ts",        
-        "src/game.ts"
+        "src/game.ts",
+        "src/game-db.ts"        
     ],
 }

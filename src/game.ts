@@ -2,12 +2,37 @@ module.paths.push('js')
 
 import * as Nes from 'nes'
 import * as ClientProtocol from 'client-protocol'
+import * as GameDB from 'game-db'
 
 let playing: boolean = false;
 
 export function gameOngoing(): boolean {
     return playing;
 }
+
+interface GameRound {
+    brexit: boolean;
+    president: string;
+    presidentDiscarded: boolean;
+    chancellor: string;
+    chancellorDiscarded: boolean;
+    votes: {[playerName: string]: boolean};
+    wentThrough: boolean;
+    cardPlayed?: ClientProtocol.Card;    
+    killed?: string;
+    investigated?: string;    
+}
+
+export interface GameLog {
+    roles?:  {[playerName: string]: Role}; 
+    rounds: GameRound[];
+    liberalWin?: boolean;
+    fascistsPlayed?: number;
+    liberalsPlayed?: number;
+}
+
+let currentRound;
+let gameLog: GameLog = {rounds: []};
 
 let registrations: string[] = []
 
@@ -44,6 +69,8 @@ function initialise_roles(roles: Role[]) {
 }
 
 export function investigate(name: string): Role {
+    currentRound.investigated = name;
+    
     const role = players.find(p => name === p.name).role;
     return role == Role.Hitler ? Role.Fascist : role;
 }
@@ -116,6 +143,11 @@ export function startGame(): GameActionResults {
         shuffle(players);
         president_index = 0;
 
+        gameLog.roles = players.reduce((results, player) => {
+            results[player.name] = player.role;
+            return results;
+        }, {});
+
         return players.reduce((results, player) => {
             const otherRoles = (()=> {
                 if (player.role === Role.Fascist
@@ -165,6 +197,11 @@ export function startRound(): GameActionResults {
         }, results);
 }
 
+export function endRound() {
+    gameLog.rounds.push(currentRound);
+    currentRound = null;
+}
+
 export function playerReady(name: string): GameActionResults  {
     let player = players.find(p => p.name === name);
     ready_to_play.push(player);
@@ -188,6 +225,7 @@ export function advancePresident(brexit: boolean) {
 export function selectPresident(name): GameActionResults {
     last_president_index = president_index;
     president_index = players.findIndex(p => p.name === name);
+    endRound();
     return startRound();
 }
 
@@ -255,13 +293,20 @@ function sendToAll(event: ClientProtocol.ClientEvent): GameActionResults {
     }, {});  
 }
 
-function liberalVictory(): GameActionResults  {
-    return sendToAll(ClientProtocol.ClientEvent.LiberalVictory);
+function endGame(liberalWin: boolean) {
+    endRound();
+    gameLog.liberalWin = liberalWin;
+    gameLog.liberalsPlayed = liberals_played;
+    gameLog.fascistsPlayed = fascists_played;
+
+    GameDB.writeGameLog(gameLog);
+    
+    return sendToAll(liberalWin ? ClientProtocol.ClientEvent.LiberalVictory
+                     : ClientProtocol.ClientEvent.FascistVictory);
 }
 
-function fascistVictory(): GameActionResults  {
-    return sendToAll(ClientProtocol.ClientEvent.FascistVictory);    
-}
+let liberalVictory = () => endGame(true);
+let fascistVictory = () => endGame(false);
 
 function investigationPower (name: string): GameActionResults  {
     const targets = players.filter(p => {
@@ -287,9 +332,12 @@ export function peekCardPower (name: string): GameActionResults  {
 }
 
 export function kill (name: string): GameActionResults  {
+    currentRound.killed = name;
+    
     let killed = players.find(p => name === p.name);
     killed.dead = true;
 
+    endRound();
     advancePresident(false);
     let results = startRound();
     results[killed.name] = { event: ClientProtocol.ClientEvent.Dead };
@@ -307,6 +355,8 @@ function killPower (name: string): GameActionResults  {
 }
 
 export function playCard (card: ClientProtocol.Card, brexit: boolean): GameActionResults  {
+    currentRound.cardPlayed = card;
+    
     if (card === ClientProtocol.Card.Liberal) {
         liberals_played += 1;
 
@@ -350,9 +400,26 @@ export function playCard (card: ClientProtocol.Card, brexit: boolean): GameActio
         }
     }
 
+    endRound();
     advancePresident(false);
     return startRound();
 }
+
+export function chancellorDiscard (card: ClientProtocol.Card, remainder: ClientProtocol.Card) {
+    currentRound.chancellorDiscarded = (card === ClientProtocol.Card.Liberal &&
+                                        remainder === ClientProtocol.Card.Fascist)
+
+    discardCard(card);
+}
+
+export function presidentDiscard (card: ClientProtocol.Card, remainder: ClientProtocol.Card[]) {
+    currentRound.presidentDiscarded = (card === ClientProtocol.Card.Liberal &&
+                                       remainder[0] === ClientProtocol.Card.Fascist &&
+                                       remainder[1] === ClientProtocol.Card.Fascist)    
+
+    discardCard(card);
+}
+
 
 export function discardCard (card: ClientProtocol.Card) {
     discard_pile.push(card);
@@ -369,6 +436,12 @@ export function vote(name: string, vote: boolean): GameActionResults  {
     const alive_players: number = players.reduce((acc, p) => acc + (p.dead ? 0 : 1), 0);
 
     if (n_votes == alive_players) {
+        currentRound = {
+            president: players[president_index].name,
+            chancellor: players[chancellor_index].name,
+            votes: players.reduce((res, p) => { res[p.name] = p.vote; return res; }, {})
+        };
+        
         //reveal votes
         players.map(p => p.voteHidden = false);
 
@@ -377,6 +450,8 @@ export function vote(name: string, vote: boolean): GameActionResults  {
         }
 
         if (yes_votes > alive_players / 2) {
+            currentRound.wentThrough = true;
+            
             yes_votes = 0;
             n_votes = 0;
 
@@ -394,15 +469,20 @@ export function vote(name: string, vote: boolean): GameActionResults  {
             return results;
         }
         else {
+            currentRound.wentThrough = false;                
+            
             if (brexit_counter == 2) {
+                currentRound.brexit = true;
+
                 brexit_counter = 0;
-                playCard(drawCard(), true);
+                return playCard(drawCard(), true);
             }
             else {
                 brexit_counter += 1;
             }
             yes_votes = 0;
             n_votes = 0;
+            endRound();
             advancePresident(true);
             return startRound();
         }
