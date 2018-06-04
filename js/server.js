@@ -35,13 +35,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var _this = this;
+nw.Window.open("./html/server.html");
 module.paths.push('js');
 var Hapi = require("hapi");
 var Game = require("game");
 var ClientProtocol = require("client-protocol");
 var ServerProtocol = require("server-protocol");
 var uiSocket;
-nw.Window.open("./html/server.html");
 var server = new Hapi.Server({
     port: 3000
 });

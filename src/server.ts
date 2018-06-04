@@ -1,5 +1,8 @@
 "use strict";
 
+declare var nw: any;
+nw.Window.open("./html/server.html")
+
 module.paths.push('js')
 
 export = 0;
@@ -9,11 +12,8 @@ import * as Boom from 'boom'
 import * as Game from 'game'
 import * as ClientProtocol from 'client-protocol'
 import * as ServerProtocol from 'server-protocol'
-declare var nw: any;
 
 var uiSocket: Nes.Socket;
-
-nw.Window.open("./html/server.html")
 
 const server = new Hapi.Server({
     port: 3000
