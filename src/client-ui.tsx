@@ -48,7 +48,7 @@ class Checkbox extends React.Component<{label: string, handleCheckboxChange: ((l
     return (
       <div className="checkbox">
         <label>
-          <input
+          <Input
             type="checkbox"
             value={label}
             checked={this.state['isChecked']}
@@ -377,30 +377,46 @@ class NameForm extends React.Component {
       <form onSubmit={this.handleSubmit}>
         <label>
           Name:
-          <input type="text" value={this.state['name']} onChange={this.handleNameChange} />
+          <Input type="text" value={this.state['name']} onChange={this.handleNameChange} />
         </label>
-        <input type="submit" value="Register" />
+        <Input type="submit" value="Register" />
       </form>
     );
   }}
 
+const Border = styled.div`
+        background: #f7e1c3;
+        height: 80vh;
+        width: 80vw;
+        margin-left: 10vw;
+        margin-top: 10vh;
+        position: relative;
+`;        
+
 const Root = styled.div`
-  background: #36322a;
-  border-color: #f7e1c3;
-  border-style: solid;
-  border-width: 20px;
-  font-family: courier-prime,Courier,sans-serif;
-  color: #f7e1c3;
+        background: #36322a;
+        margin: 20px;
+        font-family: courier-prime,Courier,sans-serif;
+        color: #f7e1c3;
+        font-size: 20px;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: 0;
+        height: auto;
 `;
 
 async function showReconnectGUI() {
     const players = await sendAction(ClientAction.GetPlayerList);
 
     ReactDOM.render(
+    <Border>
       <Root id="root">
         <h1>Reconnect</h1>
         {players.payload.map(p => <button onClick={e => reconnect(p)}>{p}</button>)}
       </Root>
+    </Border>
       ,document.getElementById('container'));
 }  
 
@@ -410,9 +426,11 @@ async function showGUI() {
   }
   else {
   ReactDOM.render(
-    <Root id="root">
-      <NameForm />
-    </Root>
+    <Border>
+      <Root id="root">
+        <NameForm />
+      </Root>
+    </Border>
     ,document.getElementById('container')
   );
   }

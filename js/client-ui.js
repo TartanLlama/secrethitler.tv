@@ -5719,6 +5719,10 @@ var ClientAction;
 
 "use strict";
 
+var __makeTemplateObject = (this && this.__makeTemplateObject) || function (cooked, raw) {
+    if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
+    return cooked;
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -5729,10 +5733,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __makeTemplateObject = (this && this.__makeTemplateObject) || function (cooked, raw) {
-    if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
-    return cooked;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -5784,6 +5784,7 @@ try {
 catch (err) {
     alert("Failed to connect");
 }
+var Input = styled_components_1["default"].input(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  font-size: 20px;\n"], ["\n  font-size: 20px;\n"])));
 var currentCards;
 var Role;
 (function (Role) {
@@ -5815,7 +5816,7 @@ var Checkbox = /** @class */ (function (_super) {
         var label = this.props.label;
         return (React.createElement("div", { className: "checkbox" },
             React.createElement("label", null,
-                React.createElement("input", { type: "checkbox", value: label, checked: this.state['isChecked'], onChange: this.toggleCheckboxChange }),
+                React.createElement(Input, { type: "checkbox", value: label, checked: this.state['isChecked'], onChange: this.toggleCheckboxChange }),
                 label)));
     };
     return Checkbox;
@@ -5856,7 +5857,7 @@ var GameEnd = /** @class */ (function (_super) {
                     this.props.otherPlayers.map(function (p) {
                         return React.createElement(Checkbox, { label: p, handleCheckboxChange: _this.toggleCheckbox, key: p });
                     })),
-                React.createElement("button", { type: 'submit' }, "End Game"))));
+                React.createElement(Button, { type: 'submit' }, "End Game"))));
     };
     return GameEnd;
 }(React.Component));
@@ -5981,7 +5982,7 @@ function investigate(name) {
                             name,
                             " is ",
                             roleName(role.payload)),
-                        React.createElement("button", { onClick: investigationComplete }, "Ready")), document.getElementById('root'));
+                        React.createElement(Button, { onClick: investigationComplete }, "Ready")), document.getElementById('root'));
                     return [2 /*return*/];
             }
         });
@@ -6043,7 +6044,7 @@ function handleServerMessage(message) {
                 p.name,
                 " is ",
                 roleName(p.role)); }),
-            React.createElement("button", { onClick: readyToPlay }, "Ready")), document.getElementById('root'));
+            React.createElement(Button, { onClick: readyToPlay }, "Ready")), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.NotifyNotPresident) {
         ReactDOM.render(React.createElement("h1", null,
@@ -6054,7 +6055,7 @@ function handleServerMessage(message) {
     else if (message.event === ClientProtocol.ClientEvent.NotifyPresident) {
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Nominate a chancellor"),
-            message.otherPlayers.map(function (p) { return React.createElement("button", { onClick: function (e) { selectChancellor(p); } }, p); })), document.getElementById('root'));
+            message.otherPlayers.map(function (p) { return React.createElement(Button, { onClick: function (e) { selectChancellor(p); } }, p); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.StartVote) {
         ReactDOM.render(React.createElement("div", null,
@@ -6065,14 +6066,14 @@ function handleServerMessage(message) {
                 message.chancellor,
                 " as Chancellor."),
             message.brexit && React.createElement("h2", null, "This is Brexit!"),
-            React.createElement("button", { onClick: function (e) { return vote(true); } }, "Ja"),
-            React.createElement("button", { onClick: function (e) { return vote(false); } }, "Nein")), document.getElementById('root'));
+            React.createElement(Button, { onClick: function (e) { return vote(true); } }, "Ja"),
+            React.createElement(Button, { onClick: function (e) { return vote(false); } }, "Nein")), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.NotifyPresidentCards) {
         currentCards = message.cards;
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Choose a card to discard"),
-            message.cards.map(function (c, idx) { return React.createElement("button", { onClick: function (e) { return discard(idx); } }, ClientProtocol.cardToString(c)); })), document.getElementById('root'));
+            message.cards.map(function (c, idx) { return React.createElement(Button, { onClick: function (e) { return discard(idx); } }, ClientProtocol.cardToString(c)); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.NotifyWaitForCards) {
         ReactDOM.render(React.createElement("h1", null, "Wait to recieve your cards"), document.getElementById('root'));
@@ -6084,7 +6085,7 @@ function handleServerMessage(message) {
         currentCards = message.cards;
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Choose a card to play"),
-            message.cards.map(function (c, idx) { return React.createElement("button", { onClick: function (e) { return play(idx); } }, ClientProtocol.cardToString(c)); })), document.getElementById('root'));
+            message.cards.map(function (c, idx) { return React.createElement(Button, { onClick: function (e) { return play(idx); } }, ClientProtocol.cardToString(c)); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.GameEnd) {
         var team = (message.winner === ClientProtocol.Team.Liberal ? "Liberals" : "Fascists");
@@ -6093,24 +6094,24 @@ function handleServerMessage(message) {
     else if (message.event === ClientProtocol.ClientEvent.InvestigationPower) {
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Choose who to investigate"),
-            message.targets.map(function (p) { return React.createElement("button", { onClick: function (e) { investigate(p); } }, p); })), document.getElementById('root'));
+            message.targets.map(function (p) { return React.createElement(Button, { onClick: function (e) { investigate(p); } }, p); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.PeekPower) {
         ReactDOM.render(React.createElement("div", null,
             message.cards.map(function (c, idx) {
                 return React.createElement("img", { src: "/assets/" + ClientProtocol.cardToString(c).toLowerCase() + "-policy.png", style: { width: '30%' } });
             }),
-            React.createElement("button", { onClick: peekComplete }, "Ready")), document.getElementById('root'));
+            React.createElement(Button, { onClick: peekComplete }, "Ready")), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.KillPower) {
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Who do you want to kill?"),
-            message.targets.map(function (p) { return React.createElement("button", { onClick: function (e) { kill(p); } }, p); })), document.getElementById('root'));
+            message.targets.map(function (p) { return React.createElement(Button, { onClick: function (e) { kill(p); } }, p); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.SelectPresidentPower) {
         ReactDOM.render(React.createElement("div", null,
             React.createElement("h1", null, "Select a president"),
-            message.targets.map(function (p) { return React.createElement("button", { onClick: function (e) { selectPresident(p); } }, p); })), document.getElementById('root'));
+            message.targets.map(function (p) { return React.createElement(Button, { onClick: function (e) { selectPresident(p); } }, p); })), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.Dead) {
         ReactDOM.render(React.createElement("h1", null, "You are dead."), document.getElementById('root'));
@@ -6151,7 +6152,7 @@ var NameForm = /** @class */ (function (_super) {
                     case 1:
                         response = _a.sent();
                         if (response.payload === true) {
-                            ReactDOM.render(React.createElement("button", { onClick: startGame }, "Start Game"), document.getElementById('root'));
+                            ReactDOM.render(React.createElement(Button, { onClick: startGame }, "Start Game"), document.getElementById('root'));
                         }
                         else {
                             alert(response.payload);
@@ -6165,12 +6166,13 @@ var NameForm = /** @class */ (function (_super) {
         return (React.createElement("form", { onSubmit: this.handleSubmit },
             React.createElement("label", null,
                 "Name:",
-                React.createElement("input", { type: "text", value: this.state['name'], onChange: this.handleNameChange })),
-            React.createElement("input", { type: "submit", value: "Register" })));
+                React.createElement(Input, { type: "text", value: this.state['name'], onChange: this.handleNameChange })),
+            React.createElement(Input, { type: "submit", value: "Register" })));
     };
     return NameForm;
 }(React.Component));
-var Root = styled_components_1["default"].div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  background: #36322a;\n  border-color: #f7e1c3;\n  border-style: solid;\n  border-width: 20px;\n  font-family: courier-prime,Courier,sans-serif;\n  color: #f7e1c3;\n"], ["\n  background: #36322a;\n  border-color: #f7e1c3;\n  border-style: solid;\n  border-width: 20px;\n  font-family: courier-prime,Courier,sans-serif;\n  color: #f7e1c3;\n"])));
+var Border = styled_components_1["default"].div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n        background: #f7e1c3;\n        height: 80vh;\n        width: 80vw;\n        margin-left: 10vw;\n        margin-top: 10vh;\n        position: relative;\n"], ["\n        background: #f7e1c3;\n        height: 80vh;\n        width: 80vw;\n        margin-left: 10vw;\n        margin-top: 10vh;\n        position: relative;\n"])));
+var Root = styled_components_1["default"].div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n        background: #36322a;\n        margin: 20px;\n        font-family: courier-prime,Courier,sans-serif;\n        color: #f7e1c3;\n        font-size: 20px;\n        position: absolute;\n        left: 0;\n        right: 0;\n        bottom: 0;\n        top: 0;\n        height: auto;\n"], ["\n        background: #36322a;\n        margin: 20px;\n        font-family: courier-prime,Courier,sans-serif;\n        color: #f7e1c3;\n        font-size: 20px;\n        position: absolute;\n        left: 0;\n        right: 0;\n        bottom: 0;\n        top: 0;\n        height: auto;\n"])));
 function showReconnectGUI() {
     return __awaiter(this, void 0, void 0, function () {
         var players;
@@ -6179,9 +6181,10 @@ function showReconnectGUI() {
                 case 0: return [4 /*yield*/, sendAction(client_protocol_1.ClientAction.GetPlayerList)];
                 case 1:
                     players = _a.sent();
-                    ReactDOM.render(React.createElement(Root, { id: "root" },
-                        React.createElement("h1", null, "Reconnect"),
-                        players.payload.map(function (p) { return React.createElement("button", { onClick: function (e) { return reconnect(p); } }, p); })), document.getElementById('container'));
+                    ReactDOM.render(React.createElement(Border, null,
+                        React.createElement(Root, { id: "root" },
+                            React.createElement("h1", null, "Reconnect"),
+                            players.payload.map(function (p) { return React.createElement(Button, { onClick: function (e) { return reconnect(p); } }, p); }))), document.getElementById('container'));
                     return [2 /*return*/];
             }
         });
@@ -6194,14 +6197,15 @@ function showGUI() {
                 showReconnectGUI();
             }
             else {
-                ReactDOM.render(React.createElement(Root, { id: "root" },
-                    React.createElement(NameForm, null)), document.getElementById('container'));
+                ReactDOM.render(React.createElement(Border, null,
+                    React.createElement(Root, { id: "root" },
+                        React.createElement(NameForm, null))), document.getElementById('container'));
             }
             return [2 /*return*/];
         });
     });
 }
-var templateObject_1;
+var templateObject_1, templateObject_2, templateObject_3;
 
 
 /***/ }),
