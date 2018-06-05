@@ -1,5 +1,6 @@
 export enum Role {Liberal, Fascist, Hitler}
 export enum Card { Liberal, Fascist }
+export enum Team { Liberal, Fascist }
 
 export function cardToString (card: Card) {
     if (card == Card.Liberal) return "Liberal";
@@ -15,7 +16,7 @@ export enum ClientEvent {
     StartVote,
     NotifyPresidentCards, NotifyWaitForCards, NotifyWaitForPlay, NotifyChancellorCards,
     InvestigationPower, SelectPresidentPower, PeekPower, KillPower,
-    LiberalVictory, FascistVictory,
+    GameEnd,
     Dead
 }
 
@@ -80,12 +81,10 @@ interface KillPowerEvent {
     targets: string[];    
 }
 
-interface LiberalVictoryEvent {
-    event: ClientEvent.LiberalVictory;
-}
-
-interface FascistVictoryEvent {
-    event: ClientEvent.FascistVictory;
+interface GameEndEvent {
+    event: ClientEvent.GameEnd;
+    winner: Team;
+    otherPlayers: string[];
 }
 
 interface DeadEvent {
@@ -96,7 +95,7 @@ export type Payload = StartGameEvent | NotifyPresidentEvent | NotifyNotPresident
     StartVoteEvent |
     NotifyPresidentCardsEvent | NotifyWaitForCardsEvent | NotifyWaitForPlayEvent | NotifyChancellorCardsEvent |
     InvestigationPowerEvent | SelectPresidentPowerEvent | PeekPowerEvent | KillPowerEvent |
-    LiberalVictoryEvent | FascistVictoryEvent |
+    GameEndEvent | 
     DeadEvent;
 
 
@@ -109,7 +108,8 @@ export enum ClientAction {
     SelectChancellor, SelectPresident,
     Vote, Discard, Play,
     Kill, Investigate, InvestigationComplete, PeekComplete,
-    GetPlayerList, Reconnect
+    GetPlayerList, Reconnect,
+    Kudos
 }
 
 interface RegisterAction {
@@ -165,13 +165,18 @@ interface ReconnectAction {
     action: ClientAction.Reconnect;
     name: string;
 }
+interface KudosAction {
+    action: ClientAction.Kudos;
+    names: string[];
+}
 
 export type ActionPayload =
     RegisterAction | StartGameAction | ReadyAction |
     SelectChancellorAction | SelectPresidentAction |
     VoteAction | DiscardAction | PlayAction |
     KillAction | InvestigateAction | InvestigationCompleteAction | PeekCompleteAction |
-    GetPlayerListAction | ReconnectAction;
+    GetPlayerListAction | ReconnectAction |
+    KudosAction;
 
 
 

@@ -11,6 +11,11 @@ var Card;
     Card[Card["Liberal"] = 0] = "Liberal";
     Card[Card["Fascist"] = 1] = "Fascist";
 })(Card = exports.Card || (exports.Card = {}));
+var Team;
+(function (Team) {
+    Team[Team["Liberal"] = 0] = "Liberal";
+    Team[Team["Fascist"] = 1] = "Fascist";
+})(Team = exports.Team || (exports.Team = {}));
 function cardToString(card) {
     if (card == Card.Liberal)
         return "Liberal";
@@ -34,9 +39,8 @@ var ClientEvent;
     ClientEvent[ClientEvent["SelectPresidentPower"] = 9] = "SelectPresidentPower";
     ClientEvent[ClientEvent["PeekPower"] = 10] = "PeekPower";
     ClientEvent[ClientEvent["KillPower"] = 11] = "KillPower";
-    ClientEvent[ClientEvent["LiberalVictory"] = 12] = "LiberalVictory";
-    ClientEvent[ClientEvent["FascistVictory"] = 13] = "FascistVictory";
-    ClientEvent[ClientEvent["Dead"] = 14] = "Dead";
+    ClientEvent[ClientEvent["GameEnd"] = 12] = "GameEnd";
+    ClientEvent[ClientEvent["Dead"] = 13] = "Dead";
 })(ClientEvent = exports.ClientEvent || (exports.ClientEvent = {}));
 ////////////////////////////////////////////////
 // Actions sent from the client to the server //
@@ -57,4 +61,5 @@ var ClientAction;
     ClientAction[ClientAction["PeekComplete"] = 11] = "PeekComplete";
     ClientAction[ClientAction["GetPlayerList"] = 12] = "GetPlayerList";
     ClientAction[ClientAction["Reconnect"] = 13] = "Reconnect";
+    ClientAction[ClientAction["Kudos"] = 14] = "Kudos";
 })(ClientAction = exports.ClientAction || (exports.ClientAction = {}));

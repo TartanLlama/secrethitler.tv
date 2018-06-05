@@ -10,6 +10,10 @@ export function gameOngoing(): boolean {
     return playing;
 }
 
+enum GameEvent {
+    Execution, Investigation, Peek, PresidentSelect
+}
+
 interface GameRound {
     brexit: boolean;
     president: string;
@@ -18,9 +22,8 @@ interface GameRound {
     chancellorDiscarded: boolean;
     votes: {[playerName: string]: boolean};
     wentThrough: boolean;
-    cardPlayed?: ClientProtocol.Card;    
-    killed?: string;
-    investigated?: string;    
+    cardPlayed?: ClientProtocol.Card;
+    events: any[];
 }
 
 export interface GameLog {
@@ -29,10 +32,11 @@ export interface GameLog {
     liberalWin?: boolean;
     fascistsPlayed?: number;
     liberalsPlayed?: number;
+    kudos: {[playerName: string]: number};
 }
 
 let currentRound;
-let gameLog: GameLog = {rounds: []};
+let gameLog: GameLog = {rounds: [], kudos: {}};
 
 let registrations: string[] = []
 
@@ -69,7 +73,7 @@ function initialise_roles(roles: Role[]) {
 }
 
 export function investigate(name: string): Role {
-    currentRound.investigated = name;
+    currentRound.events.push({ event: GameEvent.Investigation, name: name });
     
     const role = players.find(p => name === p.name).role;
     return role == Role.Hitler ? Role.Fascist : role;
@@ -223,6 +227,7 @@ export function advancePresident(brexit: boolean) {
 }
 
 export function selectPresident(name): GameActionResults {
+    currentRound.events.push({ event: GameEvent.PresidentSelect, name: name });    
     last_president_index = president_index;
     president_index = players.findIndex(p => p.name === name);
     endRound();
@@ -286,9 +291,10 @@ function drawCard(): ClientProtocol.Card {
     return deck.pop();
 }
 
-function sendToAll(event: ClientProtocol.ClientEvent): GameActionResults {
+function sendToAll(event: ClientProtocol.ClientEvent, payload:any = {}): GameActionResults {
     return players.reduce((results, p) => {
-        results[p.name] = {event: event};
+        payload.event = event;
+        results[p.name] = payload;
         return results;
     }, {});  
 }
@@ -299,10 +305,9 @@ function endGame(liberalWin: boolean) {
     gameLog.liberalsPlayed = liberals_played;
     gameLog.fascistsPlayed = fascists_played;
 
-    GameDB.writeGameLog(gameLog);
-    
-    return sendToAll(liberalWin ? ClientProtocol.ClientEvent.LiberalVictory
-                     : ClientProtocol.ClientEvent.FascistVictory);
+    return sendToAll(ClientProtocol.ClientEvent.GameEnd,
+                     { winner: liberalWin ? ClientProtocol.Team.Liberal : ClientProtocol.Team.Fascist,
+                       otherPlayers: getPlayerNames() });
 }
 
 let liberalVictory = () => endGame(true);
@@ -326,13 +331,15 @@ function selectPresidentPower (name: string): GameActionResults  {
 }
 
 export function peekCardPower (name: string): GameActionResults  {
+    currentRound.events.push({ event: GameEvent.Peek });
+    
     let result = {};
     result[name] = { event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() };
     return result;
 }
 
 export function kill (name: string): GameActionResults  {
-    currentRound.killed = name;
+    currentRound.events.push({event: GameEvent.Execution, name: name});
     
     let killed = players.find(p => name === p.name);
     killed.dead = true;
@@ -425,6 +432,25 @@ export function discardCard (card: ClientProtocol.Card) {
     discard_pile.push(card);
 }
 
+var n_kudos = 0;
+export function kudos(names: string[]) {
+    n_kudos += 1;
+
+    names.map(n => {
+        if (gameLog.kudos[n] === undefined) {
+            gameLog.kudos[n] = 1;
+            return;
+        }
+        gameLog.kudos[n] += 1;
+    });
+
+    if (n_kudos === players.length) {
+        GameDB.writeGameLog(gameLog);
+    }
+
+    return null;
+}
+
 export function vote(name: string, vote: boolean): GameActionResults  {
     let player = players.find(p => p.name === name);
     player.vote = vote;
@@ -439,7 +465,8 @@ export function vote(name: string, vote: boolean): GameActionResults  {
         currentRound = {
             president: players[president_index].name,
             chancellor: players[chancellor_index].name,
-            votes: players.reduce((res, p) => { res[p.name] = p.vote; return res; }, {})
+            votes: players.reduce((res, p) => { res[p.name] = p.vote; return res; }, {}),
+            events: []
         };
         
         //reveal votes

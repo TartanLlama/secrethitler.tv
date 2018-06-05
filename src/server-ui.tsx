@@ -144,7 +144,7 @@ ReactDOM.render(
              lastPresident={gameState.lastPresident}
              chancellor={gameState.chancellor}
              lastChancellor={gameState.lastChancellor}                              
-             players={gameState.players.slice(0, gameState.players.length/2)}/>
+             players={gameState.players.slice(0, gameState.players.length/2).reverse()}/>
    </div>,
    document.getElementById('root'));
 }

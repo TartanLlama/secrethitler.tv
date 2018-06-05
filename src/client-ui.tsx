@@ -27,6 +27,92 @@ function roleName(role: Role) {
     }
 }
 
+class Checkbox extends React.Component<{label: string, handleCheckboxChange: ((label: string) => void)}> {
+  constructor(props) {
+    super(props);
+        
+    this.state = {isChecked: false};
+    this.toggleCheckboxChange = this.toggleCheckboxChange.bind(this);      
+  }
+    
+  toggleCheckboxChange = () => {
+    const { handleCheckboxChange, label } = this.props;
+
+    this.setState({ isChecked: !this.state['isChecked'] });
+
+    handleCheckboxChange(label);
+  }
+
+  render() {
+    const { label } = this.props;
+    return (
+      <div className="checkbox">
+        <label>
+          <input
+            type="checkbox"
+            value={label}
+            checked={this.state['isChecked']}
+            onChange={this.toggleCheckboxChange}
+          />
+
+          {label}
+        </label>
+      </div>
+    );
+  }
+}
+
+class GameEnd extends React.Component<{team: string, otherPlayers: string[]}> {
+  constructor(props) {
+    super(props);
+        
+    this.state = {selectedCheckboxes: new Set()};
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.toggleCheckbox = this.toggleCheckbox.bind(this);            
+  }
+
+  toggleCheckbox = label => {
+    if (this.state['selectedCheckboxes'].has(label)) {
+      const newState = this.state['selectedCheckboxes'];
+      newState.delete(label);
+      this.setState({selectedCheckboxes: newState});
+    } else {
+      this.setState({selectedCheckboxes: this.state['selectedCheckboxes'].add(label)});        
+    }
+  }
+
+  handleSubmit = formSubmitEvent => {
+    formSubmitEvent.preventDefault();
+    ReactDOM.render(
+            <h1>Game over.</h1>
+                ,
+            document.getElementById('root'));      
+    sendAction(ClientAction.Kudos, { names: Array.from(this.state['selectedCheckboxes']) })
+  }
+
+  render() {
+    return (
+            <div>
+              <h1>{this.props.team} win!</h1>
+              <form onSubmit={this.handleSubmit}>
+                <fieldset>
+                  <legend>Give kudos to players who played well/made the game interesting</legend>
+                  {
+                      this.props.otherPlayers.map(p =>
+                        <Checkbox
+                          label={p}
+                          handleCheckboxChange={this.toggleCheckbox}
+                          key={p}
+                        />)                                        
+                  }
+                  </fieldset>
+                <button type='submit'>End Game</button>
+              </form>
+            </div>
+    );
+  }
+}
+
 async function sendAction(action: ClientAction, payload: any = {}) {
     payload.action = action;
     return await ws.request({method: 'POST', path: '/client_action', payload: payload});
@@ -34,6 +120,11 @@ async function sendAction(action: ClientAction, payload: any = {}) {
 
 async function reconnect(name) {
     await sendAction(ClientAction.Reconnect, {name: name});
+}
+
+async function endGame(event) {
+    event.preventDefault();
+    console.log(event);
 }
 
 async function readyToPlay(event) {
@@ -195,17 +286,9 @@ function handleServerMessage(message) {
         );
     }
 
-    else if (message.event === ClientProtocol.ClientEvent.LiberalVictory) {
-        ReactDOM.render(
-            <h1>Liberals win!</h1>
-                ,
-            document.getElementById('root'));
-    }
-
-    else if (message.event === ClientProtocol.ClientEvent.FascistVictory) {
-        ReactDOM.render(
-            <h1>Fascists win!</h1>
-                ,
+    else if (message.event === ClientProtocol.ClientEvent.GameEnd) {
+        const team = (message.winner === ClientProtocol.Team.Liberal ? "Liberals" : "Fascists");
+        ReactDOM.render(<GameEnd team={team} otherPlayers={message.otherPlayers}/>,
             document.getElementById('root'));
     }
 

@@ -5654,6 +5654,11 @@ var Card;
     Card[Card["Liberal"] = 0] = "Liberal";
     Card[Card["Fascist"] = 1] = "Fascist";
 })(Card = exports.Card || (exports.Card = {}));
+var Team;
+(function (Team) {
+    Team[Team["Liberal"] = 0] = "Liberal";
+    Team[Team["Fascist"] = 1] = "Fascist";
+})(Team = exports.Team || (exports.Team = {}));
 function cardToString(card) {
     if (card == Card.Liberal)
         return "Liberal";
@@ -5677,9 +5682,8 @@ var ClientEvent;
     ClientEvent[ClientEvent["SelectPresidentPower"] = 9] = "SelectPresidentPower";
     ClientEvent[ClientEvent["PeekPower"] = 10] = "PeekPower";
     ClientEvent[ClientEvent["KillPower"] = 11] = "KillPower";
-    ClientEvent[ClientEvent["LiberalVictory"] = 12] = "LiberalVictory";
-    ClientEvent[ClientEvent["FascistVictory"] = 13] = "FascistVictory";
-    ClientEvent[ClientEvent["Dead"] = 14] = "Dead";
+    ClientEvent[ClientEvent["GameEnd"] = 12] = "GameEnd";
+    ClientEvent[ClientEvent["Dead"] = 13] = "Dead";
 })(ClientEvent = exports.ClientEvent || (exports.ClientEvent = {}));
 ////////////////////////////////////////////////
 // Actions sent from the client to the server //
@@ -5700,6 +5704,7 @@ var ClientAction;
     ClientAction[ClientAction["PeekComplete"] = 11] = "PeekComplete";
     ClientAction[ClientAction["GetPlayerList"] = 12] = "GetPlayerList";
     ClientAction[ClientAction["Reconnect"] = 13] = "Reconnect";
+    ClientAction[ClientAction["Kudos"] = 14] = "Kudos";
 })(ClientAction = exports.ClientAction || (exports.ClientAction = {}));
 
 
@@ -5793,6 +5798,68 @@ function roleName(role) {
         case Role.Hitler: return "Hitler";
     }
 }
+var Checkbox = /** @class */ (function (_super) {
+    __extends(Checkbox, _super);
+    function Checkbox(props) {
+        var _this = _super.call(this, props) || this;
+        _this.toggleCheckboxChange = function () {
+            var _a = _this.props, handleCheckboxChange = _a.handleCheckboxChange, label = _a.label;
+            _this.setState({ isChecked: !_this.state['isChecked'] });
+            handleCheckboxChange(label);
+        };
+        _this.state = { isChecked: false };
+        _this.toggleCheckboxChange = _this.toggleCheckboxChange.bind(_this);
+        return _this;
+    }
+    Checkbox.prototype.render = function () {
+        var label = this.props.label;
+        return (React.createElement("div", { className: "checkbox" },
+            React.createElement("label", null,
+                React.createElement("input", { type: "checkbox", value: label, checked: this.state['isChecked'], onChange: this.toggleCheckboxChange }),
+                label)));
+    };
+    return Checkbox;
+}(React.Component));
+var GameEnd = /** @class */ (function (_super) {
+    __extends(GameEnd, _super);
+    function GameEnd(props) {
+        var _this = _super.call(this, props) || this;
+        _this.toggleCheckbox = function (label) {
+            if (_this.state['selectedCheckboxes'].has(label)) {
+                var newState = _this.state['selectedCheckboxes'];
+                newState["delete"](label);
+                _this.setState({ selectedCheckboxes: newState });
+            }
+            else {
+                _this.setState({ selectedCheckboxes: _this.state['selectedCheckboxes'].add(label) });
+            }
+        };
+        _this.handleSubmit = function (formSubmitEvent) {
+            formSubmitEvent.preventDefault();
+            ReactDOM.render(React.createElement("h1", null, "Game over."), document.getElementById('root'));
+            sendAction(client_protocol_1.ClientAction.Kudos, { names: Array.from(_this.state['selectedCheckboxes']) });
+        };
+        _this.state = { selectedCheckboxes: new Set() };
+        _this.handleSubmit = _this.handleSubmit.bind(_this);
+        _this.toggleCheckbox = _this.toggleCheckbox.bind(_this);
+        return _this;
+    }
+    GameEnd.prototype.render = function () {
+        var _this = this;
+        return (React.createElement("div", null,
+            React.createElement("h1", null,
+                this.props.team,
+                " win!"),
+            React.createElement("form", { onSubmit: this.handleSubmit },
+                React.createElement("fieldset", null,
+                    React.createElement("legend", null, "Give kudos to players who played well/made the game interesting"),
+                    this.props.otherPlayers.map(function (p) {
+                        return React.createElement(Checkbox, { label: p, handleCheckboxChange: _this.toggleCheckbox, key: p });
+                    })),
+                React.createElement("button", { type: 'submit' }, "End Game"))));
+    };
+    return GameEnd;
+}(React.Component));
 function sendAction(action, payload) {
     if (payload === void 0) { payload = {}; }
     return __awaiter(this, void 0, void 0, function () {
@@ -5815,6 +5882,15 @@ function reconnect(name) {
                     _a.sent();
                     return [2 /*return*/];
             }
+        });
+    });
+}
+function endGame(event) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            event.preventDefault();
+            console.log(event);
+            return [2 /*return*/];
         });
     });
 }
@@ -6010,11 +6086,9 @@ function handleServerMessage(message) {
             React.createElement("h1", null, "Choose a card to play"),
             message.cards.map(function (c, idx) { return React.createElement("button", { onClick: function (e) { return play(idx); } }, ClientProtocol.cardToString(c)); })), document.getElementById('root'));
     }
-    else if (message.event === ClientProtocol.ClientEvent.LiberalVictory) {
-        ReactDOM.render(React.createElement("h1", null, "Liberals win!"), document.getElementById('root'));
-    }
-    else if (message.event === ClientProtocol.ClientEvent.FascistVictory) {
-        ReactDOM.render(React.createElement("h1", null, "Fascists win!"), document.getElementById('root'));
+    else if (message.event === ClientProtocol.ClientEvent.GameEnd) {
+        var team = (message.winner === ClientProtocol.Team.Liberal ? "Liberals" : "Fascists");
+        ReactDOM.render(React.createElement(GameEnd, { team: team, otherPlayers: message.otherPlayers }), document.getElementById('root'));
     }
     else if (message.event === ClientProtocol.ClientEvent.InvestigationPower) {
         ReactDOM.render(React.createElement("div", null,

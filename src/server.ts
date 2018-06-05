@@ -142,6 +142,10 @@ function handleClientAction (sock: Nes.Socket, payload: ClientProtocol.ActionPay
             sock.send(lastMessages[payload.name]);
             return null;
         }
+
+        case ClientProtocol.ClientAction.Kudos: {
+            return Game.kudos(payload.names);
+        }            
     }
 }
 

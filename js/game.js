@@ -8,8 +8,15 @@ function gameOngoing() {
     return playing;
 }
 exports.gameOngoing = gameOngoing;
+var GameEvent;
+(function (GameEvent) {
+    GameEvent[GameEvent["Execution"] = 0] = "Execution";
+    GameEvent[GameEvent["Investigation"] = 1] = "Investigation";
+    GameEvent[GameEvent["Peek"] = 2] = "Peek";
+    GameEvent[GameEvent["PresidentSelect"] = 3] = "PresidentSelect";
+})(GameEvent || (GameEvent = {}));
 var currentRound;
-var gameLog = { rounds: [] };
+var gameLog = { rounds: [], kudos: {} };
 var registrations = [];
 var RegistrationResult;
 (function (RegistrationResult) {
@@ -33,7 +40,7 @@ var players = [];
 function initialise_roles(roles) {
 }
 function investigate(name) {
-    currentRound.investigated = name;
+    currentRound.events.push({ event: GameEvent.Investigation, name: name });
     var role = players.find(function (p) { return name === p.name; }).role;
     return role == Role.Hitler ? Role.Fascist : role;
 }
@@ -168,6 +175,7 @@ function advancePresident(brexit) {
 }
 exports.advancePresident = advancePresident;
 function selectPresident(name) {
+    currentRound.events.push({ event: GameEvent.PresidentSelect, name: name });
     last_president_index = president_index;
     president_index = players.findIndex(function (p) { return p.name === name; });
     endRound();
@@ -219,9 +227,11 @@ function drawCard() {
     }
     return deck.pop();
 }
-function sendToAll(event) {
+function sendToAll(event, payload) {
+    if (payload === void 0) { payload = {}; }
     return players.reduce(function (results, p) {
-        results[p.name] = { event: event };
+        payload.event = event;
+        results[p.name] = payload;
         return results;
     }, {});
 }
@@ -230,9 +240,8 @@ function endGame(liberalWin) {
     gameLog.liberalWin = liberalWin;
     gameLog.liberalsPlayed = liberals_played;
     gameLog.fascistsPlayed = fascists_played;
-    GameDB.writeGameLog(gameLog);
-    return sendToAll(liberalWin ? ClientProtocol.ClientEvent.LiberalVictory
-        : ClientProtocol.ClientEvent.FascistVictory);
+    return sendToAll(ClientProtocol.ClientEvent.GameEnd, { winner: liberalWin ? ClientProtocol.Team.Liberal : ClientProtocol.Team.Fascist,
+        otherPlayers: getPlayerNames() });
 }
 var liberalVictory = function () { return endGame(true); };
 var fascistVictory = function () { return endGame(false); };
@@ -252,13 +261,14 @@ function selectPresidentPower(name) {
     return result;
 }
 function peekCardPower(name) {
+    currentRound.events.push({ event: GameEvent.Peek });
     var result = {};
     result[name] = { event: ClientProtocol.ClientEvent.PeekPower, cards: peekThree() };
     return result;
 }
 exports.peekCardPower = peekCardPower;
 function kill(name) {
-    currentRound.killed = name;
+    currentRound.events.push({ event: GameEvent.Execution, name: name });
     var killed = players.find(function (p) { return name === p.name; });
     killed.dead = true;
     endRound();
@@ -339,6 +349,22 @@ function discardCard(card) {
     discard_pile.push(card);
 }
 exports.discardCard = discardCard;
+var n_kudos = 0;
+function kudos(names) {
+    n_kudos += 1;
+    names.map(function (n) {
+        if (gameLog.kudos[n] === undefined) {
+            gameLog.kudos[n] = 1;
+            return;
+        }
+        gameLog.kudos[n] += 1;
+    });
+    if (n_kudos === players.length) {
+        GameDB.writeGameLog(gameLog);
+    }
+    return null;
+}
+exports.kudos = kudos;
 function vote(name, vote) {
     var player = players.find(function (p) { return p.name === name; });
     player.vote = vote;
@@ -351,7 +377,8 @@ function vote(name, vote) {
         currentRound = {
             president: players[president_index].name,
             chancellor: players[chancellor_index].name,
-            votes: players.reduce(function (res, p) { res[p.name] = p.vote; return res; }, {})
+            votes: players.reduce(function (res, p) { res[p.name] = p.vote; return res; }, {}),
+            events: []
         };
         //reveal votes
         players.map(function (p) { return p.voteHidden = false; });

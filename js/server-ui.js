@@ -5876,7 +5876,7 @@ function renderBoardState(gameState) {
             React.createElement(BrexitCounter, { count: gameState.brexitCounter }),
             React.createElement(DiscardPile, null)),
         React.createElement(FascistMat, { nPlayers: gameState.players.length }),
-        React.createElement(Players, { president: gameState.president, lastPresident: gameState.lastPresident, chancellor: gameState.chancellor, lastChancellor: gameState.lastChancellor, players: gameState.players.slice(0, gameState.players.length / 2) })), document.getElementById('root'));
+        React.createElement(Players, { president: gameState.president, lastPresident: gameState.lastPresident, chancellor: gameState.chancellor, lastChancellor: gameState.lastChancellor, players: gameState.players.slice(0, gameState.players.length / 2).reverse() })), document.getElementById('root'));
 }
 function handleServerMessage(message) {
     if (message.event === ServerProtocol.ServerEvent.DisplayRegistered) {

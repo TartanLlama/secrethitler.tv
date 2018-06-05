@@ -148,6 +148,9 @@ function handleClientAction(sock, payload) {
             sock.send(lastMessages[payload.name]);
             return null;
         }
+        case ClientProtocol.ClientAction.Kudos: {
+            return Game.kudos(payload.names);
+        }
     }
 }
 var init = function () { return __awaiter(_this, void 0, void 0, function () {
